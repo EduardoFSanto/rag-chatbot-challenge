@@ -3,7 +3,7 @@
 import { Request, Response, NextFunction } from "express";
 import { fileParser } from "../../core/fileParser.js";
 import { chunker } from "../../core/chunker.js";
-import { embeddingsService } from "../../core/embeddings.js";
+import { embeddingService } from "../../core/embeddings.js"; // ⬅️ MUDOU (singular)
 import { vectorStore } from "../../storage/vectorStore.js";
 import { logger } from "../../utils/logger.js";
 
@@ -46,9 +46,17 @@ export const uploadController = {
         });
       }
 
-      // Step 4: Embed
+      // Step 4: Embed each chunk
       logger.info(`Generating embeddings for ${chunks.length} chunks...`);
-      const embeddedChunks = await embeddingsService.embedChunks(chunks);
+      const embeddedChunks = [];
+
+      for (const chunk of chunks) {
+        const embedding = await embeddingService.generate(chunk.text); // ⬅️ MUDOU
+        embeddedChunks.push({
+          ...chunk,
+          embedding,
+        });
+      }
 
       // Step 5: Store
       const fileId = vectorStore.addChunks(embeddedChunks);

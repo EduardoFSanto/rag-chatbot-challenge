@@ -1,49 +1,43 @@
 // src/core/llm.ts
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { config } from "../utils/config.js";
+import { logger } from "../utils/logger.js";
 
-const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+const groq = new Groq({
+  apiKey: config.groq.apiKey,
+});
 
 export const llmService = {
   async generate(prompt: string): Promise<string> {
     try {
-      const model = genAI.getGenerativeModel({
-        model: config.gemini.llmModel,
-        generationConfig: {
-          temperature: config.rag.llmTemperature,
-        },
+      logger.debug("Calling Groq LLM...");
+
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        model: config.groq.model,
+        temperature: config.rag.llmTemperature,
+        max_tokens: 2048,
       });
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = chatCompletion.choices[0]?.message?.content;
 
       if (!text || text.trim().length === 0) {
         throw new Error("LLM returned empty response");
       }
 
+      logger.debug("✅ Groq response received");
       return text.trim();
     } catch (error: any) {
-      if (error.status === 429) {
-        throw {
-          code: "API_RATE_LIMITED",
-          message: "Gemini API rate limited",
-          statusCode: 429,
-        };
-      }
-
-      if (error.status === 401 || error.status === 403) {
-        throw {
-          code: "INVALID_API_KEY",
-          message: "Invalid Gemini API key",
-          statusCode: 500,
-        };
-      }
-
+      logger.error("Groq LLM error:", error.message);
       throw {
         code: "LLM_ERROR",
-        message: `Failed to generate response: ${error.message}`,
+        message: `Failed to generate response: ${error.message || error}`,
         statusCode: 500,
       };
     }

@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG Chatbot API</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 40px;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .card h2 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      input[type="file"],
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .result {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 8px;
+        display: none;
+      }
+
+      .result.success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+
+      .result.error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      .answer-box {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 15px;
+        border-left: 4px solid #667eea;
+      }
+
+      .sources {
+        margin-top: 15px;
+      }
+
+      .source-item {
+        background: white;
+        padding: 12px;
+        margin-top: 10px;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        font-size: 0.9rem;
+      }
+
+      .source-item strong {
+        color: #667eea;
+      }
+
+      .stats {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        color: #666;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #667eea;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🤖 RAG Chatbot API</h1>
+        <p>Upload documents and ask questions</p>
+      </div>
+
+      <!-- Upload Section -->
+      <div class="card">
+        <h2>📤 Upload Document</h2>
+        <form id="uploadForm">
+          <div class="form-group">
+            <label for="fileInput">Select a PDF or TXT file:</label>
+            <input type="file" id="fileInput" accept=".pdf,.txt" required />
+          </div>
+          <button type="submit" id="uploadBtn">Upload Document</button>
+        </form>
+        <div class="loading" id="uploadLoading">Uploading...</div>
+        <div class="result" id="uploadResult"></div>
+      </div>
+
+      <!-- Query Section -->
+      <div class="card">
+        <h2>❓ Ask a Question</h2>
+        <form id="queryForm">
+          <div class="form-group">
+            <label for="questionInput">Your question:</label>
+            <textarea
+              id="questionInput"
+              placeholder="What is RAG?"
+              required
+            ></textarea>
+          </div>
+          <button type="submit" id="queryBtn">Ask Question</button>
+        </form>
+        <div class="loading" id="queryLoading">Generating answer...</div>
+        <div class="result" id="queryResult"></div>
+      </div>
+    </div>
+
+    <script>
+      // Upload form handler
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const fileInput = document.getElementById("fileInput");
+          const uploadBtn = document.getElementById("uploadBtn");
+          const uploadLoading = document.getElementById("uploadLoading");
+          const uploadResult = document.getElementById("uploadResult");
+
+          const file = fileInput.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          uploadBtn.disabled = true;
+          uploadLoading.style.display = "block";
+          uploadResult.style.display = "none";
+
+          try {
+            const response = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              uploadResult.className = "result success";
+              uploadResult.innerHTML = `
+                        <strong>✅ Success!</strong><br>
+                        File: ${data.filename}<br>
+                        Chunks: ${data.num_chunks}<br>
+                        Characters: ${data.total_chars}
+                    `;
+            } else {
+              throw new Error(data.error || "Upload failed");
+            }
+          } catch (error) {
+            uploadResult.className = "result error";
+            uploadResult.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+          } finally {
+            uploadBtn.disabled = false;
+            uploadLoading.style.display = "none";
+            uploadResult.style.display = "block";
+          }
+        });
+
+      // Query form handler
+      document
+        .getElementById("queryForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const questionInput = document.getElementById("questionInput");
+          const queryBtn = document.getElementById("queryBtn");
+          const queryLoading = document.getElementById("queryLoading");
+          const queryResult = document.getElementById("queryResult");
+
+          const question = questionInput.value.trim();
+          if (!question) return;
+
+          queryBtn.disabled = true;
+          queryLoading.style.display = "block";
+          queryResult.style.display = "none";
+
+          try {
+            const response = await fetch("/api/ask", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ question }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              let html =
+                '<div class="answer-box"><strong>💡 Answer:</strong><br><br>' +
+                data.answer +
+                "</div>";
+
+              if (data.sources && data.sources.length > 0) {
+                html += '<div class="sources"><strong>📚 Sources:</strong>';
+                data.sources.forEach((source) => {
+                  html += `
+                                <div class="source-item">
+                                    <strong>${source.filename}</strong> (Chunk ${source.chunk_index}, Score: ${source.similarity_score})<br>
+                                    <em>"${source.snippet}"</em>
+                                </div>
+                            `;
+                });
+                html += "</div>";
+              }
+
+              if (data.retrieval_stats) {
+                html += `
+                            <div class="stats">
+                                📊 Retrieved ${data.retrieval_stats.chunks_retrieved} chunks from ${data.retrieval_stats.total_chunks_in_store} total
+                            </div>
+                        `;
+              }
+
+              queryResult.className = "result success";
+              queryResult.innerHTML = html;
+            } else {
+              throw new Error(data.error || data.message || "Query failed");
+            }
+          } catch (error) {
+            queryResult.className = "result error";
+            queryResult.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+          } finally {
+            queryBtn.disabled = false;
+            queryLoading.style.display = "none";
+            queryResult.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>

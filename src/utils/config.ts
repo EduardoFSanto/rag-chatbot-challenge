@@ -10,22 +10,27 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   logLevel: process.env.LOG_LEVEL || "info",
 
-  // Gemini API
-  gemini: {
-    apiKey: process.env.GEMINI_API_KEY || "",
-    embeddingModel: "embedding-001",
-    llmModel: "gemini-pro",
+  // Groq LLM
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || "",
+    model: "llama-3.3-70b-versatile", // Fast, smart, free
+  },
+
+  // Embeddings (local model, no API needed)
+  embeddings: {
+    model: "Xenova/all-MiniLM-L6-v2", // Runs locally
+    dimensions: 384, // Output dimension
   },
 
   // RAG parameters
   rag: {
-    chunkSize: 2000, // characters
-    chunkOverlap: 500, // characters
-    minChunkLength: 50, // skip tiny chunks
-    retrievalK: 5, // top K chunks to retrieve
-    similarityThreshold: 0.7, // cosine similarity threshold
-    llmTemperature: 0.1, // low = factual, high = creative
-    maxQuestionLength: 5000, // characters
+    chunkSize: 2000,
+    chunkOverlap: 500,
+    minChunkLength: 50,
+    retrievalK: 5,
+    similarityThreshold: 0.3,
+    llmTemperature: 0.1,
+    maxQuestionLength: 5000,
   },
 
   // File upload
@@ -36,6 +41,6 @@ export const config = {
 };
 
 // Validation: check required env vars
-if (!config.gemini.apiKey) {
-  throw new Error("GEMINI_API_KEY environment variable is required");
+if (!config.groq.apiKey) {
+  throw new Error("GROQ_API_KEY environment variable is required");
 }
