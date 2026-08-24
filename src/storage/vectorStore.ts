@@ -1,54 +1,97 @@
-// src/storage/vectorStore.ts
+import { QdrantClient } from "@qdrant/js-client-rest";
+import { v4 as uuidv4 } from "uuid";
+import type { StoredChunk, SearchResult } from "../types/index.js";
+import { logger } from "../utils/logger.js";
 
-import { StoredChunk, SearchResult } from "../types/index.js";
+const client = new QdrantClient({
+  url: process.env.QDRANT_URL || "http://localhost:6333",
+});
+
+const COLLECTION_NAME = process.env.COLLECTION_NAME || "vrtech_knowledge";
+const VECTOR_SIZE = 384;
 
 class VectorStore {
-  private chunks: StoredChunk[] = [];
+  private isInitialized = false;
 
-  addChunks(chunks: StoredChunk[]): string {
+  private async initialize() {
+    if (this.isInitialized) return;
+    try {
+      const collections = await client.getCollections();
+      const exists = collections.collections.some((c: any) => c.name === COLLECTION_NAME);
+
+      if (!exists) {
+        await client.createCollection(COLLECTION_NAME, {
+          vectors: { size: VECTOR_SIZE, distance: "Cosine" },
+        });
+        logger.info(`Created Qdrant collection: ${COLLECTION_NAME}`);
+      }
+      this.isInitialized = true;
+    } catch (error) {
+      logger.error("Failed to initialize Qdrant", error);
+      throw error;
+    }
+  }
+
+  async addChunks(chunks: StoredChunk[]): Promise<string> {
+    await this.initialize();
     const fileId = `upload_${Date.now()}`;
-    this.chunks.push(...chunks);
+
+    const points = chunks.map((chunk) => ({
+      id: uuidv4(),
+      vector: chunk.embedding,
+      payload: {
+        id: chunk.id,
+        text: chunk.text,
+        source_file: chunk.source_file,
+        chunk_index: chunk.chunk_index,
+        char_start: chunk.char_start,
+        char_end: chunk.char_end,
+        file_id: fileId,
+      },
+    }));
+
+    await client.upsert(COLLECTION_NAME, { wait: true, points });
+    logger.info(`Stored ${points.length} chunks in Qdrant with file_id: ${fileId}`);
+
     return fileId;
   }
 
-  search(
-    queryEmbedding: number[],
-    k: number,
-    threshold: number,
-  ): SearchResult[] {
-    // Calcular similaridade para todos os chunks
-    const scored = this.chunks.map((chunk) => ({
-      chunk,
-      similarity_score: this.cosineSimilarity(queryEmbedding, chunk.embedding),
+  async search(queryEmbedding: number[], k: number, threshold: number): Promise<SearchResult[]> {
+    await this.initialize();
+
+    const results = await client.query(COLLECTION_NAME, {
+      query: queryEmbedding,
+      limit: k,
+      score_threshold: threshold,
+      with_payload: true,
+      with_vector: true,
+    });
+
+    return results.points.map((r: any) => ({
+      chunk: {
+        id: r.payload.id,
+        text: r.payload.text,
+        source_file: r.payload.source_file,
+        chunk_index: r.payload.chunk_index,
+        char_start: r.payload.char_start,
+        char_end: r.payload.char_end,
+        embedding: r.vector,
+      } as StoredChunk,
+      similarity_score: r.score,
     }));
-
-    // Filtrar por threshold e pegar top K
-    return scored
-      .filter((r) => r.similarity_score >= threshold)
-      .sort((a, b) => b.similarity_score - a.similarity_score)
-      .slice(0, k);
   }
 
-  isEmpty(): boolean {
-    return this.chunks.length === 0;
+  async isEmpty(): Promise<boolean> {
+    await this.initialize();
+    const info = await client.getCollection(COLLECTION_NAME);
+    return (info.points_count || 0) === 0;
   }
 
-  count(): number {
-    return this.chunks.length;
-  }
-
-  private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) {
-      throw new Error("Vectors must have the same length");
-    }
-
-    const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-    const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-    const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-
-    return normA && normB ? dotProduct / (normA * normB) : 0;
+  async count(): Promise<number> {
+    await this.initialize();
+    const info = await client.getCollection(COLLECTION_NAME);
+    return info.points_count || 0;
   }
 }
 
-// Singleton - uma única instância para toda a aplicação
 export const vectorStore = new VectorStore();
