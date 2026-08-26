@@ -1,5 +1,3 @@
-// src/utils/config.ts
-
 import { config as dotenvConfig } from "dotenv";
 
 dotenvConfig();
@@ -13,7 +11,7 @@ export const config = {
   // Groq LLM
   groq: {
     apiKey: process.env.GROQ_API_KEY || "",
-    model: "llama-3.3-70b-versatile", // Fast, smart, free
+    model: "openai/gpt-oss-20b", // Modelo estável e com acesso garantido no Groq
   },
 
   // Embeddings (local model, no API needed)

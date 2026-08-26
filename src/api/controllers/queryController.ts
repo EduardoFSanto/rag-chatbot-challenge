@@ -1,7 +1,5 @@
-// src/api/controllers/queryController.ts
-
 import { Request, Response, NextFunction } from "express";
-import { embeddingService } from "../../core/embeddings.js"; // ⬅️ MUDOU (singular)
+import { embeddingService } from "../../core/embeddings.js";
 import { vectorStore } from "../../storage/vectorStore.js";
 import { promptService } from "../../core/prompt.js";
 import { llmService } from "../../core/llm.js";
@@ -16,13 +14,12 @@ export const queryController = {
       logger.info(`Processing query: "${question.substring(0, 50)}..."`);
 
       // Step 1: Check if vector store is initialized
-      if (vectorStore.isEmpty()) {
+      if (await vectorStore.isEmpty()) {
         return res.status(200).json({
           success: true,
           answer: null,
           status: "no_documents",
-          message:
-            "No documents have been uploaded yet. Please upload documents first.",
+          message: "No documents have been uploaded yet. Please upload documents first.",
           sources: [],
           retrieval_stats: {
             chunks_retrieved: 0,
@@ -34,10 +31,10 @@ export const queryController = {
 
       // Step 2: Embed question
       logger.debug("Generating question embedding...");
-      const questionEmbedding = await embeddingService.generate(question); // ⬅️ MUDOU
+      const questionEmbedding = await embeddingService.generate(question);
 
       // Step 3: Retrieve chunks
-      const retrievedChunks = vectorStore.search(
+      const retrievedChunks = await vectorStore.search(
         questionEmbedding,
         config.rag.retrievalK,
         config.rag.similarityThreshold,
@@ -51,13 +48,12 @@ export const queryController = {
           success: true,
           answer: null,
           status: "insufficient_context",
-          message:
-            "No sufficiently relevant chunks found. Please try rephrasing your question or upload relevant documents.",
+          message: "No sufficiently relevant chunks found. Please try rephrasing your question or upload relevant documents.",
           sources: [],
           retrieval_stats: {
             chunks_retrieved: 0,
             threshold_used: config.rag.similarityThreshold,
-            total_chunks_in_store: vectorStore.count(),
+            total_chunks_in_store: await vectorStore.count(),
           },
         });
       }
@@ -74,14 +70,10 @@ export const queryController = {
         filename: result.chunk.source_file,
         chunk_index: result.chunk.chunk_index,
         similarity_score: Math.round(result.similarity_score * 100) / 100,
-        snippet:
-          result.chunk.text.substring(0, 150) +
-          (result.chunk.text.length > 150 ? "..." : ""),
+        snippet: result.chunk.text.substring(0, 150) + (result.chunk.text.length > 150 ? "..." : ""),
       }));
 
-      logger.info(
-        `Successfully generated answer with ${sources.length} sources`,
-      );
+      logger.info(`Successfully generated answer with ${sources.length} sources`);
 
       return res.status(200).json({
         success: true,
@@ -91,7 +83,7 @@ export const queryController = {
         retrieval_stats: {
           chunks_retrieved: retrievedChunks.length,
           threshold_used: config.rag.similarityThreshold,
-          total_chunks_in_store: vectorStore.count(),
+          total_chunks_in_store: await vectorStore.count(),
         },
       });
     } catch (error) {
