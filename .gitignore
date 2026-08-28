@@ -5,3 +5,6 @@ dist/
 uploads/
 *.log
 .DS_Store
+.env
+*_cookies.txt
+teste*.txt
