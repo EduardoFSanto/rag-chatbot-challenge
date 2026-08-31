@@ -1,6 +1,5 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { v4 as uuidv4 } from "uuid";
-import type { StoredChunk, SearchResult } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 
 const client = new QdrantClient({ url: process.env.QDRANT_URL || "http://localhost:6333" });
@@ -19,39 +18,59 @@ class VectorStore {
     this.isInitialized = true;
   }
 
-  async addChunks(chunks: StoredChunk[]): Promise<string> {
+  async addChunks(chunks: any[], documentId: string): Promise<string> {
     await this.initialize();
-    const fileId = `upload_${Date.now()}`;
+    
     const points = chunks.map((chunk) => ({
       id: uuidv4(),
       vector: chunk.embedding,
-      payload: { id: chunk.id, text: chunk.text, source_file: chunk.source_file, chunk_index: chunk.chunk_index, char_start: chunk.char_start, char_end: chunk.char_end, file_id: fileId },
+      payload: {
+        documentId: documentId, 
+        text: chunk.text,
+        source_file: chunk.source_file,
+        chunk_index: chunk.chunk_index,
+        char_start: chunk.char_start,
+        char_end: chunk.char_end,
+      },
     }));
+
     await client.upsert(COLLECTION_NAME, { wait: true, points });
-    logger.info(`Stored ${points.length} chunks in Qdrant`);
-    return fileId;
+    logger.info(`Stored ${points.length} chunks in Qdrant for document: ${documentId}`);
+    return documentId;
   }
 
-  async search(queryEmbedding: number[], k: number, threshold: number): Promise<SearchResult[]> {
+  async search(queryEmbedding: number[], k: number, threshold: number): Promise<any[]> {
     await this.initialize();
-    const results = await client.query(COLLECTION_NAME, { query: queryEmbedding, limit: k, score_threshold: threshold, with_payload: true, with_vector: true });
+    const results = await client.query(COLLECTION_NAME, { 
+      query: queryEmbedding, 
+      limit: k, 
+      score_threshold: threshold, 
+      with_payload: true, 
+      with_vector: true 
+    });
+    
     return results.points.map((r: any) => ({
-      chunk: { id: r.payload.id, text: r.payload.text, source_file: r.payload.source_file, chunk_index: r.payload.chunk_index, char_start: r.payload.char_start, char_end: r.payload.char_end, embedding: r.vector } as StoredChunk,
+      chunk: { 
+        id: r.payload.id, 
+        text: r.payload.text, 
+        source_file: r.payload.source_file, 
+        chunk_index: r.payload.chunk_index, 
+        char_start: r.payload.char_start, 
+        char_end: r.payload.char_end, 
+        embedding: r.vector 
+      },
       similarity_score: r.score,
     }));
   }
 
   async isEmpty(): Promise<boolean> {
     await this.initialize();
-    const count = await this.count();
-    logger.info(`[DEBUG] isEmpty check. Count is: ${count}`);
-    return count === 0;
+    return (await this.count()) === 0;
   }
 
   async count(): Promise<number> {
     await this.initialize();
     const response = await client.count(COLLECTION_NAME, { exact: true });
-    console.log("🔍 [DEBUG] RAW QDRANT COUNT RESPONSE:", JSON.stringify(response));
     return response.count || 0;
   }
 }

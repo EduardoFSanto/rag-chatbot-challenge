@@ -1,92 +1,72 @@
 import { Request, Response, NextFunction } from "express";
-import { embeddingService } from "../../core/embeddings.js";
+import { eq } from "drizzle-orm";
+import { db } from "../../db/index.js";
+import { conversations } from "../../db/conversations.js";
+import { messages } from "../../db/messages.js";
 import { vectorStore } from "../../storage/vectorStore.js";
-import { promptService } from "../../core/prompt.js";
+import { embeddingService } from "../../core/embeddings.js";
 import { llmService } from "../../core/llm.js";
 import { logger } from "../../utils/logger.js";
-import { config } from "../../utils/config.js";
 
 export const queryController = {
   async handle(req: Request, res: Response, next: NextFunction) {
     try {
-      const { question } = req.body;
+      const user = (req as any).user;
+      const { question, conversationId } = req.body;
 
-      logger.info(`Processing query: "${question.substring(0, 50)}..."`);
-
-      // Step 1: Check if vector store is initialized
-      if (await vectorStore.isEmpty()) {
-        return res.status(200).json({
-          success: true,
-          answer: null,
-          status: "no_documents",
-          message: "No documents have been uploaded yet. Please upload documents first.",
-          sources: [],
-          retrieval_stats: {
-            chunks_retrieved: 0,
-            threshold_used: config.rag.similarityThreshold,
-            total_chunks_in_store: 0,
-          },
-        });
+      if (!question) {
+        return res.status(400).json({ success: false, message: "Question is required" });
       }
 
-      // Step 2: Embed question
-      logger.debug("Generating question embedding...");
-      const questionEmbedding = await embeddingService.generate(question);
+      let currentConversationId = conversationId;
 
-      // Step 3: Retrieve chunks
-      const retrievedChunks = await vectorStore.search(
-        questionEmbedding,
-        config.rag.retrievalK,
-        config.rag.similarityThreshold,
-      );
-
-      logger.debug(`Retrieved ${retrievedChunks.length} relevant chunks`);
-
-      // Step 4: Check if anything was found
-      if (retrievedChunks.length === 0) {
-        return res.status(200).json({
-          success: true,
-          answer: null,
-          status: "insufficient_context",
-          message: "No sufficiently relevant chunks found. Please try rephrasing your question or upload relevant documents.",
-          sources: [],
-          retrieval_stats: {
-            chunks_retrieved: 0,
-            threshold_used: config.rag.similarityThreshold,
-            total_chunks_in_store: await vectorStore.count(),
-          },
-        });
+      if (!currentConversationId) {
+        const [newConversation] = await db.insert(conversations).values({
+          userId: user.id,
+          title: question.substring(0, 50),
+        }).returning();
+        currentConversationId = newConversation.id;
       }
 
-      // Step 5: Build prompt
-      const prompt = promptService.build(question, retrievedChunks);
+      await db.insert(messages).values({
+        conversationId: currentConversationId,
+        role: "user",
+        content: question,
+      });
 
-      // Step 6: Call LLM
-      logger.info("Generating answer with LLM...");
-      const answer = await llmService.generate(prompt);
+      const queryEmbedding = await embeddingService.generate(question);
+      const searchResults = await vectorStore.search(queryEmbedding, 3, 0.3);
 
-      // Step 7: Format response with citations
-      const sources = retrievedChunks.map((result) => ({
-        filename: result.chunk.source_file,
-        chunk_index: result.chunk.chunk_index,
-        similarity_score: Math.round(result.similarity_score * 100) / 100,
-        snippet: result.chunk.text.substring(0, 150) + (result.chunk.text.length > 150 ? "..." : ""),
-      }));
+      const context = searchResults.map((r: any) => r.chunk.text).join("\n\n");
+      
+      const prompt = `Contexto: ${context}\n\nPergunta: ${question}\n\nResposta:`;
+      const aiResponseText = await llmService.generate(prompt);
 
-      logger.info(`Successfully generated answer with ${sources.length} sources`);
+      await db.insert(messages).values({
+        conversationId: currentConversationId,
+        role: "assistant",
+        content: aiResponseText,
+        metadata: {
+          sources: searchResults.map((r: any) => ({
+            file: r.chunk.source_file,
+            score: r.similarity_score,
+          })),
+        },
+      });
+
+      await db.update(conversations)
+        .set({ updatedAt: new Date() })
+        .where(eq(conversations.id, currentConversationId));
 
       return res.status(200).json({
         success: true,
-        answer,
-        status: "success",
-        sources,
-        retrieval_stats: {
-          chunks_retrieved: retrievedChunks.length,
-          threshold_used: config.rag.similarityThreshold,
-          total_chunks_in_store: await vectorStore.count(),
-        },
+        conversationId: currentConversationId,
+        answer: aiResponseText,
+        sources: searchResults,
       });
+
     } catch (error) {
+      logger.error(`Query failed: ${error}`);
       next(error);
     }
   },
