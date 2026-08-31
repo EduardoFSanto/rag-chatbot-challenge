@@ -6,6 +6,8 @@ import { auth } from "./auth.js";
 import { errorHandler } from "./api/middleware/errorHandler.js";
 import uploadRouter from "./api/routes/upload.js";
 import queryRouter from "./api/routes/query.js";
+import conversationRouter from "./api/routes/conversation.js";
+import documentRouter from "./api/routes/document.js"; // <--- NOVO IMPORT
 import { logger } from "./utils/logger.js";
 import { vectorStore } from "./storage/vectorStore.js";
 
@@ -38,8 +40,10 @@ export const createApp = (): Express => {
 
   app.all("/api/auth/*", toNodeHandler(auth));
 
-  app.use("/api", uploadRouter);
-  app.use("/api", queryRouter);
+  app.use("/api/upload", uploadRouter);
+  app.use("/api/ask", queryRouter);
+  app.use("/api/conversations", conversationRouter);
+  app.use("/api/documents", documentRouter); // <--- NOVA ROTA REGISTRADA
 
   app.use((req: Request, res: Response) => {
     res.status(404).json({
