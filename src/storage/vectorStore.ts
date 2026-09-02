@@ -25,7 +25,7 @@ class VectorStore {
       id: uuidv4(),
       vector: chunk.embedding,
       payload: {
-        documentId: documentId, 
+        documentId: documentId,
         text: chunk.text,
         source_file: chunk.source_file,
         chunk_index: chunk.chunk_index,
@@ -39,28 +39,53 @@ class VectorStore {
     return documentId;
   }
 
-  async search(queryEmbedding: number[], k: number, threshold: number): Promise<any[]> {
+  async search(queryEmbedding: number[], k: number, threshold: number, allowedDocumentIds?: string[]): Promise<any[]> {
     await this.initialize();
-    const results = await client.query(COLLECTION_NAME, { 
-      query: queryEmbedding, 
-      limit: k, 
-      score_threshold: threshold, 
-      with_payload: true, 
-      with_vector: true 
+
+    // Construir filtro se houver document IDs permitidos
+    let filter = undefined;
+    if (allowedDocumentIds && allowedDocumentIds.length > 0) {
+      filter = {
+        should: allowedDocumentIds.map((docId) => ({
+          key: "documentId",
+          match: { value: docId },
+        })),
+      };
+    }
+
+    const results = await client.query(COLLECTION_NAME, {
+      query: queryEmbedding,
+      limit: k,
+      score_threshold: threshold,
+      with_payload: true,
+      with_vector: true,
+      filter: filter,
     });
-    
+
     return results.points.map((r: any) => ({
-      chunk: { 
-        id: r.payload.id, 
-        text: r.payload.text, 
-        source_file: r.payload.source_file, 
-        chunk_index: r.payload.chunk_index, 
-        char_start: r.payload.char_start, 
-        char_end: r.payload.char_end, 
-        embedding: r.vector 
+      chunk: {
+        id: r.payload.id,
+        text: r.payload.text,
+        source_file: r.payload.source_file,
+        chunk_index: r.payload.chunk_index,
+        char_start: r.payload.char_start,
+        char_end: r.payload.char_end,
+        embedding: r.vector,
       },
       similarity_score: r.score,
     }));
+  }
+
+  async deleteByDocumentId(documentId: string): Promise<void> {
+    await this.initialize();
+    
+    await client.delete(COLLECTION_NAME, {
+      filter: {
+        must: [{ key: "documentId", match: { value: documentId } }],
+      },
+    });
+    
+    logger.info(`Deleted all chunks for document: ${documentId}`);
   }
 
   async isEmpty(): Promise<boolean> {

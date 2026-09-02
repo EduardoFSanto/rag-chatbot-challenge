@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { db } from "../../db/index.js";
 import { documents } from "../../db/documents.js";
@@ -12,29 +12,32 @@ const COLLECTION_NAME = process.env.COLLECTION_NAME || "vrtech_knowledge";
 export const documentController = {
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
-      const user = (req as any).user;
+      const user = req.user;
+      if (!user) {
+        return res.status(401).json(createErrorResponse("UNAUTHORIZED", "Unauthorized"));
+      }
 
-      // 1. Verificar se o documento existe e pertence ao usuário (Segurança)
+      const { id } = req.params;
+
       const doc = await db.query.documents.findFirst({
-        where: eq(documents.id, id), // Adicione: and(eq(documents.userId, user.id)) se quiser restringir ao dono
+        where: and(eq(documents.id, id), eq(documents.userId, user.id)),
       });
 
       if (!doc) {
-        return res.status(404).json(createErrorResponse("NOT_FOUND", "Document not found"));
+        return res.status(404).json(
+          createErrorResponse("NOT_FOUND", "Document not found or access denied")
+        );
       }
 
-      // 2. Deletar os vetores correspondentes no Qdrant (Filtrando pelo documentId no payload)
       await qdrant.delete(COLLECTION_NAME, {
         filter: {
           must: [{ key: "documentId", match: { value: id } }],
         },
       });
 
-      // 3. Deletar os metadados do PostgreSQL
-      await db.delete(documents).where(eq(documents.id, id));
+      await db.delete(documents).where(and(eq(documents.id, id), eq(documents.userId, user.id)));
 
-      logger.info(`Document ${id} deleted successfully from Postgres and Qdrant`);
+      logger.info(`Document ${id} deleted by user ${user.id}`);
 
       return res.status(200).json(
         createSuccessResponse({ message: "Document and associated vectors deleted successfully" })
