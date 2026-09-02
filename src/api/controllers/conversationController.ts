@@ -3,11 +3,15 @@ import { eq, and, desc } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { conversations } from "../../db/conversations.js";
 import { messages } from "../../db/messages.js";
+import { createSuccessResponse, createErrorResponse } from "../../utils/apiResponse.js";
 
 export const conversationController = {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = (req as any).user;
+      const user = req.user;
+      if (!user) {
+        return res.status(401).json(createErrorResponse("UNAUTHORIZED", "Unauthorized"));
+      }
 
       const userConversations = await db.query.conversations.findMany({
         where: eq(conversations.userId, user.id),
@@ -20,10 +24,7 @@ export const conversationController = {
         },
       });
 
-      return res.status(200).json({
-        success: true,
-        data: userConversations,
-      });
+      return res.status(200).json(createSuccessResponse(userConversations));
     } catch (error) {
       next(error);
     }
@@ -31,7 +32,11 @@ export const conversationController = {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = (req as any).user;
+      const user = req.user;
+      if (!user) {
+        return res.status(401).json(createErrorResponse("UNAUTHORIZED", "Unauthorized"));
+      }
+
       const { id } = req.params;
 
       const conversation = await db.query.conversations.findFirst({
@@ -39,10 +44,9 @@ export const conversationController = {
       });
 
       if (!conversation) {
-        return res.status(404).json({
-          success: false,
-          message: "Conversation not found",
-        });
+        return res.status(404).json(
+          createErrorResponse("NOT_FOUND", "Conversation not found or access denied")
+        );
       }
 
       const chatMessages = await db.query.messages.findMany({
@@ -50,13 +54,12 @@ export const conversationController = {
         orderBy: [messages.createdAt],
       });
 
-      return res.status(200).json({
-        success: true,
-        data: {
+      return res.status(200).json(
+        createSuccessResponse({
           conversation,
           messages: chatMessages,
-        },
-      });
+        })
+      );
     } catch (error) {
       next(error);
     }
