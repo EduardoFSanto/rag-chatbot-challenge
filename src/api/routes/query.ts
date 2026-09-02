@@ -5,7 +5,6 @@ import { queryController } from "../controllers/queryController.js";
 
 const router = express.Router();
 
-
-router.post("/ask", requireAuth, validateQuestion, queryController.handle);
+router.post("/", requireAuth, validateQuestion, queryController.handle);
 
 export default router;

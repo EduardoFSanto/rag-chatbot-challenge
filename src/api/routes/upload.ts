@@ -14,7 +14,7 @@ const upload = multer({
 });
 
 router.post(
-  "/upload",
+  "/",
   requireAuth,
   requireAdmin,
   upload.single("file"),
