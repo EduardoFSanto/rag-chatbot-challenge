@@ -1,7 +1,7 @@
 // src/api/middleware/validateRequest.ts
 
 import { Request, Response, NextFunction } from "express";
-import { config } from "../../utils/config.js";
+import { config } from "../lib/config.js";
 
 export const validateFileUpload = (
   req: Request,

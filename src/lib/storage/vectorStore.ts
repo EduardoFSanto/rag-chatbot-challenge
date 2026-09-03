@@ -1,9 +1,9 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { v4 as uuidv4 } from "uuid";
-import { logger } from "../utils/logger.js";
+import { logger } from "../logger.js";
 
 const client = new QdrantClient({ url: process.env.QDRANT_URL || "http://localhost:6333" });
-const COLLECTION_NAME = process.env.COLLECTION_NAME || "vrtech_knowledge";
+export const COLLECTION_NAME = process.env.COLLECTION_NAME || "vrtech_knowledge";
 
 class VectorStore {
   private isInitialized = false;

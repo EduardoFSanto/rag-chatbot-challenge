@@ -1,7 +1,7 @@
 // src/core/embeddings.ts
 
 import { pipeline, env } from "@xenova/transformers";
-import { logger } from "../utils/logger.js";
+import { logger } from "./logger.js";
 
 // Configure to use local cache
 env.cacheDir = "./.cache";

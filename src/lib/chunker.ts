@@ -1,7 +1,7 @@
 // src/core/chunker.ts
 
 import { Chunk } from "../types/index.js";
-import { config } from "../utils/config.js";
+import { config } from "./config.js";
 
 export const chunker = {
   chunk(text: string, sourceFile: string): Chunk[] {

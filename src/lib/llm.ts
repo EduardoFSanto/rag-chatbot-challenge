@@ -1,8 +1,8 @@
 // src/core/llm.ts
 
 import Groq from "groq-sdk";
-import { config } from "../utils/config.js";
-import { logger } from "../utils/logger.js";
+import { config } from "./config.js";
+import { logger } from "./logger.js";
 
 const groq = new Groq({
   apiKey: config.groq.apiKey,

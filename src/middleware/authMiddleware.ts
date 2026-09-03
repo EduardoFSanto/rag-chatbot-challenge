@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { auth } from "../../auth.js";
-import { createErrorResponse } from "../../utils/apiResponse.js";
+import { auth } from "../auth.js";
+import { createErrorResponse } from "../lib/apiResponse.js";
 
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {

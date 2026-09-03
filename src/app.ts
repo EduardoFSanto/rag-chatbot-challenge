@@ -3,13 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth.js";
-import { errorHandler } from "./api/middleware/errorHandler.js";
-import uploadRouter from "./api/routes/upload.js";
-import queryRouter from "./api/routes/query.js";
-import conversationRouter from "./api/routes/conversation.js";
-import documentRouter from "./api/routes/document.js"; // <--- NOVO IMPORT
-import { logger } from "./utils/logger.js";
-import { vectorStore } from "./storage/vectorStore.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { logger } from "./lib/logger.js";
+
+// Importando os NOVOS módulos refatorados
+import documentRouter from "./modules/documents/document.routes.js";
+import conversationRouter from "./modules/conversations/conversation.routes.js";
+import queryRouter from "./modules/query/query.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,32 +19,22 @@ export const createApp = (): Express => {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  
+  // Arquivos estáticos (se ainda estiver usando o index.html de teste)
   app.use(express.static(path.join(__dirname, "../public")));
-
-  app.use((req, res, next) => {
-    logger.debug(`${req.method} ${req.path}`);
-    next();
-  });
-
   app.get("/", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, "../public/index.html"));
   });
 
-  app.get("/health", (req: Request, res: Response) => {
-    res.status(200).json({
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      vector_store_chunks: vectorStore.count(),
-    });
-  });
-
+  // Better Auth
   app.all("/api/auth/*", toNodeHandler(auth));
 
-  app.use("/api/upload", uploadRouter);
-  app.use("/api/ask", queryRouter);
-  app.use("/api/conversations", conversationRouter);
-  app.use("/api/documents", documentRouter); // <--- NOVA ROTA REGISTRADA
+  // Registrando os Módulos Refatorados
+  app.use("/api/documents", documentRouter);         // Cuida de /api/documents/upload e /api/documents/:id
+  app.use("/api/conversations", conversationRouter); // Cuida de /api/conversations
+  app.use("/api/ask", queryRouter);                  // Cuida de /api/ask
 
+  // 404 handler
   app.use((req: Request, res: Response) => {
     res.status(404).json({
       error: "Not found",
@@ -54,6 +44,5 @@ export const createApp = (): Express => {
   });
 
   app.use(errorHandler);
-
   return app;
 };

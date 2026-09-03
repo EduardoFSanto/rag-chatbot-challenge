@@ -1,8 +1,8 @@
 // src/server.ts
 
 import { createApp } from "./app.js";
-import { config } from "./utils/config.js";
-import { logger } from "./utils/logger.js";
+import { config } from "./lib/config.js";
+import { logger } from "./lib/logger.js";
 
 const app = createApp();
 
