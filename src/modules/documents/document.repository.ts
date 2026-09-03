@@ -31,9 +31,10 @@ export const documentRepository = {
   },
 
   async markFailedProcessing() {
-    await db
+    return db
       .update(documents)
       .set({ status: "failed" })
-      .where(eq(documents.status, "processing"));
+      .where(eq(documents.status, "processing"))
+      .returning({ id: documents.id });
   },
 };
