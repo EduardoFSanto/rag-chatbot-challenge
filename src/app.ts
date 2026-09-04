@@ -12,6 +12,7 @@ import documentRouter from "./modules/documents/document.routes.js";
 import conversationRouter from "./modules/conversations/conversation.routes.js";
 import queryRouter from "./modules/query/query.routes.js";
 import sectorRouter from "./modules/sectors/sector.routes.js";
+import adminRouter from "./modules/sectors/admin.routes.js";
 import { vectorStore } from "./lib/storage/vectorStore.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,6 +58,7 @@ export const createApp = (): Express => {
   // Registrando os Módulos Refatorados
   app.use("/api/documents", documentRouter);         // Cuida de /api/documents/upload e /api/documents/:id
   app.use("/api/sectors", sectorRouter);
+  app.use("/api/admin", adminRouter);
   app.use("/api/conversations", conversationRouter); // Cuida de /api/conversations
   app.use("/api/ask", queryRouter);                  // Cuida de /api/ask
 
