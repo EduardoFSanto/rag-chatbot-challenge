@@ -1,6 +1,7 @@
 import express, { RequestHandler } from "express";
 import multer from "multer";
 import { requireAuth, requireAdmin } from "../../middleware/authMiddleware.js";
+import { validateFileUpload } from "../../middleware/validateRequest.js";
 import { documentController } from "./document.controller.js";
 
 const router = express.Router();
@@ -15,11 +16,13 @@ const upload = multer({
 // Upload de arquivo
 router.post(
   "/upload",
-  requireAuth,
   requireAdmin,
   upload.single("file"),
+  validateFileUpload,
   documentController.upload as RequestHandler,
 );
+
+router.get("/", requireAuth, documentController.list as RequestHandler);
 
 // Deletar documento
 router.delete(

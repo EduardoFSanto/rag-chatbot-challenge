@@ -3,6 +3,7 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../lib/logger.js";
 import { AppError } from "../types/index.js";
+import { createErrorResponse } from "../lib/apiResponse.js";
 
 export const errorHandler = (
   err: Error | AppError,
@@ -31,31 +32,18 @@ export const errorHandler = (
   }
 
   if (appErr.code === "API_RATE_LIMITED") {
-    return res.status(429).json({
-      error: "API rate limited. Please retry in 30 seconds.",
-      code: "RATE_LIMITED",
-      retry_after: 30,
-    });
+    return res.status(429).json(createErrorResponse("RATE_LIMITED", "API rate limited. Please retry in 30 seconds."));
   }
 
   if (appErr.code === "INVALID_API_KEY") {
-    return res.status(500).json({
-      error: "External service unavailable (invalid credentials)",
-      code: "SERVICE_UNAVAILABLE",
-    });
+    return res.status(500).json(createErrorResponse("SERVICE_UNAVAILABLE", "External service unavailable (invalid credentials)"));
   }
 
   if (appErr.code === "EMBEDDING_ERROR" || appErr.code === "LLM_ERROR") {
-    return res.status(appErr.statusCode || 500).json({
-      error: appErr.message || "External service error",
-      code: appErr.code,
-    });
+    return res.status(appErr.statusCode || 500).json(createErrorResponse(appErr.code, appErr.message || "External service error"));
   }
 
   // Generic error
   const statusCode = appErr.statusCode || 500;
-  return res.status(statusCode).json({
-    error: appErr.message || "Internal server error",
-    code: appErr.code || "INTERNAL_ERROR",
-  });
+  return res.status(statusCode).json(createErrorResponse(appErr.code || "INTERNAL_ERROR", appErr.message || "Internal server error"));
 };

@@ -7,7 +7,7 @@ import { vectorStore } from "../../lib/storage/vectorStore.js";
 import { embeddingService } from "../../lib/embeddings.js";
 import { llmService } from "../../lib/llm.js";
 import { logger } from "../../lib/logger.js";
-import { env } from "../../config/env.js";
+import { config } from "../../lib/config.js";
 
 interface ProcessQueryInput {
   question: string;
@@ -43,6 +43,23 @@ export const queryService = {
         })
         .returning();
       currentConversationId = newConversation.id;
+    } else {
+      const ownedConversation = await db.query.conversations.findFirst({
+        where: and(
+          eq(conversations.id, currentConversationId),
+          eq(conversations.userId, userId),
+        ),
+      });
+
+      if (!ownedConversation) {
+        const error = new Error("Conversation not found or access denied") as Error & {
+          code: string;
+          statusCode: number;
+        };
+        error.code = "NOT_FOUND";
+        error.statusCode = 404;
+        throw error;
+      }
     }
 
     // 2. Salvar mensagem do usuário
@@ -81,14 +98,14 @@ export const queryService = {
     // 6. Buscar chunks no Qdrant (filtrado por documentIds do usuário)
     const searchResults = await vectorStore.search(
       queryEmbedding,
-      3,
-      0.3,
+      config.rag.retrievalK,
+      config.rag.similarityThreshold,
       allowedDocumentIds
     );
 
     // 7. Verificar confiança (threshold)
     const maxScore = searchResults.length > 0 ? searchResults[0].similarity_score : 0;
-    const confidenceThreshold = 0.3; // Configurável
+    const confidenceThreshold = config.rag.similarityThreshold;
 
     if (maxScore < confidenceThreshold) {
       await db.insert(messages).values({

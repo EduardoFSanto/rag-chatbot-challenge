@@ -3,6 +3,20 @@ import { createSuccessResponse, createErrorResponse } from "../../lib/apiRespons
 import { documentService } from "./document.service.js";
 
 export const documentController = {
+  async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = req.user;
+      if (!user) {
+        return res.status(401).json(createErrorResponse("UNAUTHORIZED", "Unauthorized"));
+      }
+
+      const data = await documentService.listByUser(user.id);
+      return res.status(200).json(createSuccessResponse(data));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async upload(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;

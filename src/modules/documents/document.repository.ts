@@ -14,6 +14,13 @@ export const documentRepository = {
     return db.query.documents.findMany({
       where: eq(documents.userId, userId),
       orderBy: (documents, { desc }) => [desc(documents.createdAt)],
+      columns: {
+        id: true,
+        filename: true,
+        fileSize: true,
+        status: true,
+        createdAt: true,
+      },
     });
   },
 

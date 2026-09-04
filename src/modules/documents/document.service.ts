@@ -7,6 +7,10 @@ import { logger } from "../../lib/logger.js";
 import { documentRepository } from "./document.repository.js";
 
 export const documentService = {
+  async listByUser(userId: string) {
+    return documentRepository.findByUserId(userId);
+  },
+
   async ingest(input: IngestInput): Promise<IngestResult> {
     return ingestDocument(input);
   },
