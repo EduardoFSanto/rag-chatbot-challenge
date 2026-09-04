@@ -2,6 +2,8 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { documents } from "../db/schema/documents.js";
+import { documentSectors } from "../db/schema/sectors.js";
+import type { DocumentVisibility } from "../db/schema/documents.js";
 import { fileParser } from "./fileParser.js";
 import { chunker } from "./chunker.js";
 import { embeddingService } from "./embeddings.js";
@@ -14,6 +16,8 @@ export interface IngestInput {
   mimeType: string;
   fileSize: number;
   userId: string;
+  visibility?: DocumentVisibility;
+  sectorIds?: string[];
 }
 
 export type IngestResult =
@@ -36,6 +40,9 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
   let documentId: string;
 
   if (existing) {
+    if (existing.userId !== input.userId) {
+      return { outcome: "duplicate", documentId: existing.id };
+    }
     if (existing.status !== "failed") {
       return { outcome: "duplicate", documentId: existing.id };
     }
@@ -57,9 +64,14 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
           fileSize: input.fileSize,
           userId: input.userId,
           qdrantCollection: COLLECTION_NAME,
+          visibility: input.visibility ?? "private",
         })
         .returning();
       documentId = created.id;
+
+      if (input.sectorIds && input.sectorIds.length > 0) {
+        await db.insert(documentSectors).values(input.sectorIds.map((sectorId) => ({ documentId, sectorId })));
+      }
     } catch (error) {
       if (isUniqueViolation(error)) {
         const concurrent = await db.query.documents.findFirst({
@@ -82,7 +94,10 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
       embeddedChunks.push({ ...chunk, embedding });
     }
 
-    await vectorStore.addChunks(embeddedChunks, documentId);
+    await vectorStore.addChunks(embeddedChunks, documentId, {
+      visibility: input.visibility ?? "private",
+      sectorIds: input.sectorIds ?? [],
+    });
 
     await db
       .update(documents)

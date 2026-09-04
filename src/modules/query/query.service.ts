@@ -2,12 +2,12 @@ import { eq, and, desc } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { conversations } from "../../db/schema/conversations.js";
 import { messages } from "../../db/schema/messages.js";
-import { documents } from "../../db/schema/documents.js";
 import { vectorStore } from "../../lib/storage/vectorStore.js";
 import { embeddingService } from "../../lib/embeddings.js";
 import { llmService } from "../../lib/llm.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
+import { documentRepository } from "../documents/document.repository.js";
 
 interface ProcessQueryInput {
   question: string;
@@ -69,13 +69,8 @@ export const queryService = {
       content: question,
     });
 
-    // 3. Buscar documentos do usuário (filtrar retrieval)
-    const userDocuments = await db.query.documents.findMany({
-      where: and(eq(documents.userId, userId), eq(documents.status, "processed")),
-      columns: { id: true },
-    });
-
-    const allowedDocumentIds = userDocuments.map((doc) => doc.id);
+    // 3. Buscar documentos autorizados por propriedade, empresa ou setor
+    const allowedDocumentIds = await documentRepository.findAccessibleIds(userId);
 
     // 4. Se não há documentos, retornar sem contexto
     if (allowedDocumentIds.length === 0) {

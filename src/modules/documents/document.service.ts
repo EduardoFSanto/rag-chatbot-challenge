@@ -1,6 +1,8 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { documents } from "../../db/schema/documents.js";
+import { documentSectors } from "../../db/schema/sectors.js";
+import type { DocumentVisibility } from "../../db/schema/documents.js";
 import { vectorStore } from "../../lib/storage/vectorStore.js";
 import { ingestDocument, type IngestInput, type IngestResult } from "../../lib/ingestion.js";
 import { logger } from "../../lib/logger.js";
@@ -11,7 +13,7 @@ export const documentService = {
     return documentRepository.findByUserId(userId);
   },
 
-  async ingest(input: IngestInput): Promise<IngestResult> {
+  async ingest(input: IngestInput & { visibility?: DocumentVisibility; sectorIds?: string[] }): Promise<IngestResult> {
     return ingestDocument(input);
   },
 
@@ -25,6 +27,7 @@ export const documentService = {
     }
 
     await vectorStore.deleteByDocumentId(documentId);
+    await db.delete(documentSectors).where(eq(documentSectors.documentId, documentId));
     await db.delete(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 
     logger.info(`Document ${documentId} deleted by user ${userId}`);

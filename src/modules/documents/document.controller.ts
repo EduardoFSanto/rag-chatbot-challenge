@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { createSuccessResponse, createErrorResponse } from "../../lib/apiResponse.js";
 import { documentService } from "./document.service.js";
+import type { DocumentVisibility } from "../../db/schema/documents.js";
+import { sectorRepository } from "../sectors/sector.repository.js";
 
 export const documentController = {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -30,12 +32,41 @@ export const documentController = {
         );
       }
 
+      const visibility = req.body.visibility as DocumentVisibility | undefined;
+      let sectorIds: string[] = [];
+      if (req.body.sectorIds) {
+        try {
+          const parsed = JSON.parse(req.body.sectorIds);
+          if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== "string")) {
+            throw new Error("invalid sector ids");
+          }
+          sectorIds = parsed;
+        } catch {
+          return res.status(400).json(createErrorResponse("INVALID_SECTORS", "Invalid sector selection"));
+        }
+      }
+
+      if (visibility && !["private", "sector", "company"].includes(visibility)) {
+        return res.status(400).json(createErrorResponse("INVALID_VISIBILITY", "Invalid document visibility"));
+      }
+      if (visibility === "sector" && sectorIds.length === 0) {
+        return res.status(400).json(createErrorResponse("SECTOR_REQUIRED", "Select at least one sector"));
+      }
+      if (visibility !== "sector" && sectorIds.length > 0) {
+        return res.status(400).json(createErrorResponse("INVALID_SECTORS", "Sectors require sector visibility"));
+      }
+      if (sectorIds.length > 0 && (await sectorRepository.findByIds(sectorIds)).length !== sectorIds.length) {
+        return res.status(400).json(createErrorResponse("INVALID_SECTORS", "One or more selected sectors do not exist"));
+      }
+
       const result = await documentService.ingest({
         buffer: req.file.buffer,
         filename: req.file.originalname,
         mimeType: req.file.mimetype,
         fileSize: req.file.size,
         userId: user.id,
+        visibility,
+        sectorIds,
       });
 
       if (result.outcome === "duplicate") {
