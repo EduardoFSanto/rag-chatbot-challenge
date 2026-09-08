@@ -164,3 +164,21 @@ RAG parameters (chunk size, overlap, retrieval K, similarity threshold, LLM temp
 - [ ] Structured observability (requestId, durations per pipeline stage)
 - [ ] Empirical calibration of chunking and threshold
 - [ ] Next.js frontend consuming this API
+
+## YouTube knowledge ingestion
+
+The API can import an individual YouTube video through `POST /api/videos/import`.
+It uses official Portuguese captions when available and falls back to Groq Whisper
+after downloading audio with `yt-dlp`. Transcript chunks preserve timestamps and
+the document stores the video URL, external ID, title, duration, language, and
+publication date.
+
+To synchronize a public channel sequentially, configure `YOUTUBE_IMPORT_USER_EMAIL`
+for an existing admin account and run:
+
+```bash
+npm run videos:sync -- https://www.youtube.com/@vrsystem
+```
+
+The command is resumable by the document hash: already imported transcripts are
+reported as duplicates, while a failed video does not stop the remaining batch.

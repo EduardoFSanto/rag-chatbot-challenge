@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "videos:sync": "tsx src/scripts/syncYoutubeChannel.ts"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +33,8 @@
     "postgres": "^3.4.9",
     "typescript": "^5.3.3",
     "uuid": "^14.0.2",
+    "youtube-dl-exec": "^3.1.15",
+    "youtube-transcript": "^1.3.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

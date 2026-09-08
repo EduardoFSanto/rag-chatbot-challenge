@@ -16,6 +16,10 @@ export const documentRepository = {
       .selectDistinct({
         id: documents.id,
         filename: documents.filename,
+        sourceType: documents.sourceType,
+        sourceUrl: documents.sourceUrl,
+        externalId: documents.externalId,
+        durationSeconds: documents.durationSeconds,
         fileSize: documents.fileSize,
         status: documents.status,
         visibility: documents.visibility,

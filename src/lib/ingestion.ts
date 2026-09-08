@@ -18,6 +18,12 @@ export interface IngestInput {
   userId: string;
   visibility?: DocumentVisibility;
   sectorIds?: string[];
+  sourceType?: "file" | "youtube";
+  sourceUrl?: string;
+  externalId?: string;
+  publishedAt?: Date;
+  durationSeconds?: number;
+  language?: string;
 }
 
 export type IngestResult =
@@ -65,6 +71,12 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
           userId: input.userId,
           qdrantCollection: COLLECTION_NAME,
           visibility: input.visibility ?? "private",
+          sourceType: input.sourceType ?? "file",
+          sourceUrl: input.sourceUrl,
+          externalId: input.externalId,
+          publishedAt: input.publishedAt,
+          durationSeconds: input.durationSeconds,
+          language: input.language,
         })
         .returning();
       documentId = created.id;
@@ -97,6 +109,9 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     await vectorStore.addChunks(embeddedChunks, documentId, {
       visibility: input.visibility ?? "private",
       sectorIds: input.sectorIds ?? [],
+      sourceType: input.sourceType ?? "file",
+      sourceUrl: input.sourceUrl,
+      externalId: input.externalId,
     });
 
     await db

@@ -42,6 +42,8 @@ services:
       - PORT=3000
       - DATABASE_URL=postgresql://vrtech_user:vrtech_password@postgres:5432/vrtech_db
       - QDRANT_URL=http://qdrant:6333
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL}
+      - YOUTUBE_IMPORT_USER_EMAIL=${YOUTUBE_IMPORT_USER_EMAIL}
     depends_on:
       postgres:
         condition: service_healthy

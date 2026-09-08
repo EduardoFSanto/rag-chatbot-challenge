@@ -18,7 +18,7 @@ class VectorStore {
     this.isInitialized = true;
   }
 
-  async addChunks(chunks: any[], documentId: string, scope: { visibility: string; sectorIds: string[] }): Promise<string> {
+  async addChunks(chunks: any[], documentId: string, scope: { visibility: string; sectorIds: string[]; sourceType?: string; sourceUrl?: string; externalId?: string }): Promise<string> {
     await this.initialize();
     
     const points = chunks.map((chunk) => ({
@@ -33,6 +33,9 @@ class VectorStore {
         char_end: chunk.char_end,
         visibility: scope.visibility,
         sector_ids: scope.sectorIds,
+        source_type: scope.sourceType,
+        source_url: scope.sourceUrl,
+        external_id: scope.externalId,
       },
     }));
 

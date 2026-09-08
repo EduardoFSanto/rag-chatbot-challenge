@@ -15,10 +15,12 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
       return res.status(401).json(createErrorResponse("UNAUTHORIZED", "Unauthorized"));
     }
 
+    const configuredAdminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
+    const isConfiguredAdmin = configuredAdminEmail === session.user.email.toLowerCase();
     req.user = {
       id: session.user.id,
       email: session.user.email,
-      role: (session.user as { role?: string }).role ?? "user",
+      role: isConfiguredAdmin ? "admin" : (session.user as { role?: string }).role ?? "user",
       name: session.user.name,
     };
 

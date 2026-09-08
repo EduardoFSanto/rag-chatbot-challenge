@@ -43,6 +43,13 @@
       "when": 1788546918067,
       "tag": "0005_damp_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788886223674,
+      "tag": "0006_sweet_the_stranger",
+      "breakpoints": true
     }
   ]
 }
