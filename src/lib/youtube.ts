@@ -5,6 +5,7 @@ import { join } from "node:path";
 import youtubedl from "youtube-dl-exec";
 import { fetchTranscript } from "youtube-transcript";
 import Groq from "groq-sdk";
+import ffmpegPath from "ffmpeg-static";
 import { logger } from "./logger.js";
 
 type YoutubeDl = (url: string, flags: Record<string, unknown>) => Promise<unknown>;
@@ -56,7 +57,7 @@ async function whisperTranscript(url: string, language = "pt"): Promise<Transcri
   const directory = await mkdtemp(join(tmpdir(), "atlas-youtube-"));
   const audioPath = join(directory, "audio.mp3");
   try {
-    await runYoutubeDl(url, { extractAudio: true, audioFormat: "mp3", output: audioPath, noWarnings: true, noCheckCertificates: true });
+    await runYoutubeDl(url, { extractAudio: true, audioFormat: "mp3", output: audioPath, ffmpegLocation: ffmpegPath || undefined, noWarnings: true, noCheckCertificates: true });
     const response = await groq.audio.transcriptions.create({
       file: createReadStream(audioPath),
       model: "whisper-large-v3-turbo",

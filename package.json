@@ -10,7 +10,9 @@
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "videos:sync": "tsx src/scripts/syncYoutubeChannel.ts"
+    "videos:sync": "tsx src/scripts/syncYoutubeChannel.ts",
+    "youtube:cleanup": "tsx src/scripts/cleanupYoutubeDuplicates.ts",
+    "youtube:retry": "tsx src/scripts/retryFailedYoutube.ts"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +29,7 @@
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.45.2",
     "express": "^4.18.2",
+    "ffmpeg-static": "^5.3.0",
     "groq-sdk": "^0.37.0",
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",

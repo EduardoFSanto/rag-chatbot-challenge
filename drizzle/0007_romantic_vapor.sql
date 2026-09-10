@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "documents_youtube_external_id_unique" ON "documents" USING btree ("source_type","external_id") WHERE "documents"."source_type" = 'youtube' AND "documents"."external_id" IS NOT NULL;

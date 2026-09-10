@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { documents } from "../db/schema/documents.js";
 import { documentSectors } from "../db/schema/sectors.js";
@@ -28,37 +28,82 @@ export interface IngestInput {
 
 export type IngestResult =
   | { outcome: "duplicate"; documentId: string }
-  | { outcome: "processed"; documentId: string; numChunks: number; totalChars: number };
+  | {
+      outcome: "processed";
+      documentId: string;
+      numChunks: number;
+      totalChars: number;
+    };
 
 function isUniqueViolation(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
-  const err = error as { code?: string; cause?: { code?: string } };
+
+  const err = error as {
+    code?: string;
+    cause?: {
+      code?: string;
+    };
+  };
+
   return err.code === "23505" || err.cause?.code === "23505";
 }
 
-export async function ingestDocument(input: IngestInput): Promise<IngestResult> {
-  const fileHash = crypto.createHash("sha256").update(input.buffer).digest("hex");
+export async function ingestDocument(
+  input: IngestInput,
+): Promise<IngestResult> {
+  const fileHash = crypto
+    .createHash("sha256")
+    .update(input.buffer)
+    .digest("hex");
 
-  const existing = await db.query.documents.findFirst({
-    where: eq(documents.fileHash, fileHash),
-  });
+  const sourceType = input.sourceType ?? "file";
+
+  const existing = input.externalId
+    ? await db.query.documents.findFirst({
+        where: and(
+          eq(documents.sourceType, sourceType),
+          eq(documents.externalId, input.externalId),
+        ),
+      })
+    : await db.query.documents.findFirst({
+        where: eq(documents.fileHash, fileHash),
+      });
 
   let documentId: string;
 
   if (existing) {
     if (existing.userId !== input.userId) {
-      return { outcome: "duplicate", documentId: existing.id };
+      return {
+        outcome: "duplicate",
+        documentId: existing.id,
+      };
     }
+
     if (existing.status !== "failed") {
-      return { outcome: "duplicate", documentId: existing.id };
+      return {
+        outcome: "duplicate",
+        documentId: existing.id,
+      };
     }
 
     logger.info(`Retrying failed ingestion for document ${existing.id}`);
+
     await vectorStore.deleteByDocumentId(existing.id);
+
     await db
       .update(documents)
-      .set({ status: "processing" })
+      .set({
+        filename: input.filename,
+        fileHash,
+        fileSize: input.fileSize,
+        sourceUrl: input.sourceUrl,
+        publishedAt: input.publishedAt,
+        durationSeconds: input.durationSeconds,
+        language: input.language,
+        status: "processing",
+      })
       .where(eq(documents.id, existing.id));
+
     documentId = existing.id;
   } else {
     try {
@@ -71,7 +116,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
           userId: input.userId,
           qdrantCollection: COLLECTION_NAME,
           visibility: input.visibility ?? "private",
-          sourceType: input.sourceType ?? "file",
+          sourceType,
           sourceUrl: input.sourceUrl,
           externalId: input.externalId,
           publishedAt: input.publishedAt,
@@ -79,47 +124,91 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
           language: input.language,
         })
         .returning();
+
       documentId = created.id;
 
       if (input.sectorIds && input.sectorIds.length > 0) {
-        await db.insert(documentSectors).values(input.sectorIds.map((sectorId) => ({ documentId, sectorId })));
+        await db.insert(documentSectors).values(
+          input.sectorIds.map((sectorId) => ({
+            documentId,
+            sectorId,
+          })),
+        );
       }
     } catch (error) {
       if (isUniqueViolation(error)) {
-        const concurrent = await db.query.documents.findFirst({
-          where: eq(documents.fileHash, fileHash),
-        });
-        return { outcome: "duplicate", documentId: concurrent?.id ?? "unknown" };
+        const concurrent = input.externalId
+          ? await db.query.documents.findFirst({
+              where: and(
+                eq(documents.sourceType, sourceType),
+                eq(documents.externalId, input.externalId),
+              ),
+            })
+          : await db.query.documents.findFirst({
+              where: eq(documents.fileHash, fileHash),
+            });
+
+        return {
+          outcome: "duplicate",
+          documentId: concurrent?.id ?? "unknown",
+        };
       }
+
       throw error;
     }
   }
 
   try {
-    const text = await fileParser.extract(input.buffer, input.mimeType);
-    const chunks = chunker.chunk(text, input.filename);
+    const text = await fileParser.extract(
+      input.buffer,
+      input.mimeType,
+    );
 
-    logger.info(`Generating embeddings for ${chunks.length} chunks (document ${documentId})`);
+    const chunks = chunker.chunk(
+      text,
+      input.filename,
+    );
+
+    logger.info(
+      `Generating embeddings for ${chunks.length} chunks (document ${documentId})`,
+    );
+
     const embeddedChunks = [];
+
     for (const chunk of chunks) {
-      const embedding = await embeddingService.generate(chunk.text);
-      embeddedChunks.push({ ...chunk, embedding });
+      const embedding = await embeddingService.generate(
+        chunk.text,
+      );
+
+      embeddedChunks.push({
+        ...chunk,
+        embedding,
+      });
     }
 
-    await vectorStore.addChunks(embeddedChunks, documentId, {
-      visibility: input.visibility ?? "private",
-      sectorIds: input.sectorIds ?? [],
-      sourceType: input.sourceType ?? "file",
-      sourceUrl: input.sourceUrl,
-      externalId: input.externalId,
-    });
+    await vectorStore.addChunks(
+      embeddedChunks,
+      documentId,
+      {
+        visibility: input.visibility ?? "private",
+        sectorIds: input.sectorIds ?? [],
+        sourceType,
+        sourceUrl: input.sourceUrl,
+        externalId: input.externalId,
+      },
+    );
 
     await db
       .update(documents)
-      .set({ status: "processed" })
+      .set({
+        status: "processed",
+      })
       .where(eq(documents.id, documentId));
 
-    logger.info(`Document ${documentId} processed successfully`);
+    logger.info(
+      `Document ${documentId} processed successfully`,
+    );
+
     return {
       outcome: "processed",
       documentId,
@@ -127,16 +216,25 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
       totalChars: text.length,
     };
   } catch (error) {
-    await vectorStore.deleteByDocumentId(documentId).catch((cleanupError) => {
-      logger.error(`Compensation cleanup failed for document ${documentId}: ${cleanupError}`);
-    });
+    await vectorStore
+      .deleteByDocumentId(documentId)
+      .catch((cleanupError) => {
+        logger.error(
+          `Compensation cleanup failed for document ${documentId}: ${cleanupError}`,
+        );
+      });
 
     await db
       .update(documents)
-      .set({ status: "failed" })
+      .set({
+        status: "failed",
+      })
       .where(eq(documents.id, documentId));
 
-    logger.error(`Ingestion failed for document ${documentId}: ${error}`);
+    logger.error(
+      `Ingestion failed for document ${documentId}: ${error}`,
+    );
+
     throw error;
   }
 }
