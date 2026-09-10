@@ -12,7 +12,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "videos:sync": "tsx src/scripts/syncYoutubeChannel.ts",
     "youtube:cleanup": "tsx src/scripts/cleanupYoutubeDuplicates.ts",
-    "youtube:retry": "tsx src/scripts/retryFailedYoutube.ts"
+    "youtube:retry": "tsx src/scripts/retryFailedYoutube.ts",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -45,6 +46,7 @@
     "@types/node": "^26.4.0",
     "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.31.10",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "vitest": "^4.1.11"
   }
 }
