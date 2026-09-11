@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { conversations } from "../../db/schema/conversations.js";
 import { messages } from "../../db/schema/messages.js";
@@ -7,6 +7,7 @@ import { embeddingService } from "../../lib/embeddings.js";
 import { llmService } from "../../lib/llm.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
+import { promptService } from "../../lib/prompt.js";
 import { documentRepository } from "../documents/document.repository.js";
 
 interface ProcessQueryInput {
@@ -34,6 +35,7 @@ export const queryService = {
 
     // 1. Criar ou recuperar conversa
     let currentConversationId = conversationId;
+
     if (!currentConversationId) {
       const [newConversation] = await db
         .insert(conversations)
@@ -42,6 +44,7 @@ export const queryService = {
           title: question.substring(0, 50),
         })
         .returning();
+
       currentConversationId = newConversation.id;
     } else {
       const ownedConversation = await db.query.conversations.findFirst({
@@ -52,12 +55,16 @@ export const queryService = {
       });
 
       if (!ownedConversation) {
-        const error = new Error("Conversation not found or access denied") as Error & {
+        const error = new Error(
+          "Conversation not found or access denied",
+        ) as Error & {
           code: string;
           statusCode: number;
         };
+
         error.code = "NOT_FOUND";
         error.statusCode = 404;
+
         throw error;
       }
     }
@@ -70,14 +77,16 @@ export const queryService = {
     });
 
     // 3. Buscar documentos autorizados por propriedade, empresa ou setor
-    const allowedDocumentIds = await documentRepository.findAccessibleIds(userId);
+    const allowedDocumentIds =
+      await documentRepository.findAccessibleIds(userId);
 
     // 4. Se não há documentos, retornar sem contexto
     if (allowedDocumentIds.length === 0) {
       await db.insert(messages).values({
         conversationId: currentConversationId,
         role: "assistant",
-        content: "Não encontrei informações suficientes na base de conhecimento.",
+        content:
+          "Não encontrei informações suficientes na base de conhecimento.",
         metadata: { sources: [] },
       });
 
@@ -90,24 +99,33 @@ export const queryService = {
     // 5. Gerar embedding da pergunta
     const queryEmbedding = await embeddingService.generate(question);
 
-    // 6. Buscar chunks no Qdrant (filtrado por documentIds do usuário)
+    // 6. Buscar chunks no Qdrant
+    //    filtrado pelos documentos que o usuário pode acessar
     const searchResults = await vectorStore.search(
       queryEmbedding,
       config.rag.retrievalK,
       config.rag.similarityThreshold,
-      allowedDocumentIds
+      allowedDocumentIds,
     );
 
-    // 7. Verificar confiança (threshold)
-    const maxScore = searchResults.length > 0 ? searchResults[0].similarity_score : 0;
+    // 7. Verificar confiança do resultado
+    const maxScore =
+      searchResults.length > 0
+        ? searchResults[0].similarity_score
+        : 0;
+
     const confidenceThreshold = config.rag.similarityThreshold;
 
     if (maxScore < confidenceThreshold) {
       await db.insert(messages).values({
         conversationId: currentConversationId,
         role: "assistant",
-        content: "Não encontrei informações suficientes na base de conhecimento.",
-        metadata: { sources: [], maxScore },
+        content:
+          "Não encontrei informações suficientes na base de conhecimento.",
+        metadata: {
+          sources: [],
+          maxScore,
+        },
       });
 
       return {
@@ -116,31 +134,40 @@ export const queryService = {
       };
     }
 
-    // 8. Montar contexto e chamar LLM
-    const context = searchResults.map((r) => r.chunk.text).join("\n\n");
-    const prompt = `Contexto:\n${context}\n\nPergunta: ${question}\n\nResposta:`;
+    // 8. Construir prompt usando o serviço especializado
+    const prompt = promptService.build(question, searchResults);
+
+    // 9. Gerar resposta com o LLM
     const aiResponseText = await llmService.generate(prompt);
 
-    // 9. Salvar resposta da IA com metadados
-    const sources = searchResults.map((r) => ({
-      file: r.chunk.source_file,
-      score: r.similarity_score,
+    // 10. Preparar fontes utilizadas
+    const sources = searchResults.map((result) => ({
+      file: result.chunk.source_file,
+      score: result.similarity_score,
     }));
 
+    // 11. Salvar resposta da IA
     await db.insert(messages).values({
       conversationId: currentConversationId,
       role: "assistant",
       content: aiResponseText,
-      metadata: { sources, maxScore },
+      metadata: {
+        sources,
+        maxScore,
+      },
     });
 
-    // 10. Atualizar timestamp da conversa
+    // 12. Atualizar timestamp da conversa
     await db
       .update(conversations)
-      .set({ updatedAt: new Date() })
+      .set({
+        updatedAt: new Date(),
+      })
       .where(eq(conversations.id, currentConversationId));
 
-    logger.info(`Query processed for conversation ${currentConversationId}`);
+    logger.info(
+      `Query processed for conversation ${currentConversationId}`,
+    );
 
     return {
       outcome: "success",

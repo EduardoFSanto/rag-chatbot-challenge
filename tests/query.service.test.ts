@@ -174,7 +174,7 @@ describe("queryService.processQuery", () => {
 
     expect(mocks.vectorStore.search).toHaveBeenCalledWith(
       [0.1, 0.2, 0.3],
-      5,
+      30,
       0.3,
       ["document-1"],
     );
@@ -229,13 +229,13 @@ describe("queryService.processQuery", () => {
       confidence: 0.87,
     });
 
-    expect(mocks.documentRepository.findAccessibleIds).toHaveBeenCalledWith(
-      "user-1",
-    );
+    expect(
+      mocks.documentRepository.findAccessibleIds,
+    ).toHaveBeenCalledWith("user-1");
 
     expect(mocks.vectorStore.search).toHaveBeenCalledWith(
       [0.1, 0.2, 0.3],
-      5,
+      30,
       0.3,
       ["document-1", "document-2"],
     );
