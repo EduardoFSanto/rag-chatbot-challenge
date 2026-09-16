@@ -1,13 +1,21 @@
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
+
 import { db } from "../db/index.js";
 import { documents } from "../db/schema/documents.js";
+import { documentChunks } from "../db/schema/documentChunks.js";
 import { documentSectors } from "../db/schema/sectors.js";
 import type { DocumentVisibility } from "../db/schema/documents.js";
+
 import { fileParser } from "./fileParser.js";
 import { chunker } from "./chunker.js";
 import { embeddingService } from "./embeddings.js";
-import { vectorStore, COLLECTION_NAME } from "../lib/storage/vectorStore.js";
+
+import {
+  vectorStore,
+  COLLECTION_NAME,
+} from "../lib/storage/vectorStore.js";
+
 import { logger } from "../lib/logger.js";
 
 export interface IngestInput {
@@ -27,7 +35,10 @@ export interface IngestInput {
 }
 
 export type IngestResult =
-  | { outcome: "duplicate"; documentId: string }
+  | {
+      outcome: "duplicate";
+      documentId: string;
+    }
   | {
       outcome: "processed";
       documentId: string;
@@ -36,7 +47,12 @@ export type IngestResult =
     };
 
 function isUniqueViolation(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
+  if (
+    typeof error !== "object" ||
+    error === null
+  ) {
+    return false;
+  }
 
   const err = error as {
     code?: string;
@@ -45,7 +61,10 @@ function isUniqueViolation(error: unknown): boolean {
     };
   };
 
-  return err.code === "23505" || err.cause?.code === "23505";
+  return (
+    err.code === "23505" ||
+    err.cause?.code === "23505"
+  );
 }
 
 export async function ingestDocument(
@@ -56,17 +75,27 @@ export async function ingestDocument(
     .update(input.buffer)
     .digest("hex");
 
-  const sourceType = input.sourceType ?? "file";
+  const sourceType =
+    input.sourceType ?? "file";
 
   const existing = input.externalId
     ? await db.query.documents.findFirst({
         where: and(
-          eq(documents.sourceType, sourceType),
-          eq(documents.externalId, input.externalId),
+          eq(
+            documents.sourceType,
+            sourceType,
+          ),
+          eq(
+            documents.externalId,
+            input.externalId,
+          ),
         ),
       })
     : await db.query.documents.findFirst({
-        where: eq(documents.fileHash, fileHash),
+        where: eq(
+          documents.fileHash,
+          fileHash,
+        ),
       });
 
   let documentId: string;
@@ -86,9 +115,22 @@ export async function ingestDocument(
       };
     }
 
-    logger.info(`Retrying failed ingestion for document ${existing.id}`);
+    logger.info(
+      `Retrying failed ingestion for document ${existing.id}`,
+    );
 
-    await vectorStore.deleteByDocumentId(existing.id);
+    await vectorStore.deleteByDocumentId(
+      existing.id,
+    );
+
+    await db
+      .delete(documentChunks)
+      .where(
+        eq(
+          documentChunks.documentId,
+          existing.id,
+        ),
+      );
 
     await db
       .update(documents)
@@ -98,59 +140,96 @@ export async function ingestDocument(
         fileSize: input.fileSize,
         sourceUrl: input.sourceUrl,
         publishedAt: input.publishedAt,
-        durationSeconds: input.durationSeconds,
+        durationSeconds:
+          input.durationSeconds,
         language: input.language,
         status: "processing",
       })
-      .where(eq(documents.id, existing.id));
+      .where(
+        eq(
+          documents.id,
+          existing.id,
+        ),
+      );
 
     documentId = existing.id;
   } else {
     try {
-      const [created] = await db
-        .insert(documents)
-        .values({
-          filename: input.filename,
-          fileHash,
-          fileSize: input.fileSize,
-          userId: input.userId,
-          qdrantCollection: COLLECTION_NAME,
-          visibility: input.visibility ?? "private",
-          sourceType,
-          sourceUrl: input.sourceUrl,
-          externalId: input.externalId,
-          publishedAt: input.publishedAt,
-          durationSeconds: input.durationSeconds,
-          language: input.language,
-        })
-        .returning();
+      const createdDocument =
+        await db.transaction(async (tx) => {
+          const [created] = await tx
+            .insert(documents)
+            .values({
+              filename: input.filename,
+              fileHash,
+              fileSize: input.fileSize,
+              userId: input.userId,
+              qdrantCollection:
+                COLLECTION_NAME,
+              visibility:
+                input.visibility ?? "private",
+              sourceType,
+              sourceUrl:
+                input.sourceUrl,
+              externalId:
+                input.externalId,
+              publishedAt:
+                input.publishedAt,
+              durationSeconds:
+                input.durationSeconds,
+              language:
+                input.language,
+            })
+            .returning();
 
-      documentId = created.id;
+          if (
+            input.sectorIds &&
+            input.sectorIds.length > 0
+          ) {
+            await tx
+              .insert(documentSectors)
+              .values(
+                input.sectorIds.map(
+                  (sectorId) => ({
+                    documentId:
+                      created.id,
+                    sectorId,
+                  }),
+                ),
+              );
+          }
 
-      if (input.sectorIds && input.sectorIds.length > 0) {
-        await db.insert(documentSectors).values(
-          input.sectorIds.map((sectorId) => ({
-            documentId,
-            sectorId,
-          })),
-        );
-      }
+          return created;
+        });
+
+      documentId = createdDocument.id;
     } catch (error) {
       if (isUniqueViolation(error)) {
-        const concurrent = input.externalId
-          ? await db.query.documents.findFirst({
-              where: and(
-                eq(documents.sourceType, sourceType),
-                eq(documents.externalId, input.externalId),
-              ),
-            })
-          : await db.query.documents.findFirst({
-              where: eq(documents.fileHash, fileHash),
-            });
+        const concurrent =
+          input.externalId
+            ? await db.query.documents.findFirst({
+                where: and(
+                  eq(
+                    documents.sourceType,
+                    sourceType,
+                  ),
+                  eq(
+                    documents.externalId,
+                    input.externalId,
+                  ),
+                ),
+              })
+            : await db.query.documents.findFirst({
+                where: eq(
+                  documents.fileHash,
+                  fileHash,
+                ),
+              });
 
         return {
           outcome: "duplicate",
-          documentId: concurrent?.id ?? "unknown",
+          documentId:
+            concurrent?.id ?? "unknown",
         };
       }
 
@@ -159,15 +238,23 @@ export async function ingestDocument(
   }
 
   try {
-    const text = await fileParser.extract(
-      input.buffer,
-      input.mimeType,
-    );
+    const text =
+      await fileParser.extract(
+        input.buffer,
+        input.mimeType,
+      );
 
-    const chunks = chunker.chunk(
-      text,
-      input.filename,
-    );
+    const chunks =
+      chunker.chunk(
+        text,
+        input.filename,
+      );
+
+    if (chunks.length === 0) {
+      throw new Error(
+        "Document produced no valid chunks",
+      );
+    }
 
     logger.info(
       `Generating embeddings for ${chunks.length} chunks (document ${documentId})`,
@@ -176,9 +263,10 @@ export async function ingestDocument(
     const embeddedChunks = [];
 
     for (const chunk of chunks) {
-      const embedding = await embeddingService.generate(
-        chunk.text,
-      );
+      const embedding =
+        await embeddingService.generate(
+          chunk.text,
+        );
 
       embeddedChunks.push({
         ...chunk,
@@ -186,15 +274,67 @@ export async function ingestDocument(
       });
     }
 
+    /*
+     * PostgreSQL is the source of truth for chunks.
+     *
+     * IDs are generated here first and the same IDs
+     * are subsequently used as Qdrant point IDs.
+     */
+    const chunkRows =
+      await db
+        .insert(documentChunks)
+        .values(
+          embeddedChunks.map(
+            (chunk) => ({
+              documentId,
+              text: chunk.text,
+              chunkIndex:
+                chunk.chunk_index,
+              charStart:
+                chunk.char_start,
+              charEnd:
+                chunk.char_end,
+            }),
+          ),
+        )
+        .returning({
+          id: documentChunks.id,
+          chunkIndex:
+            documentChunks.chunkIndex,
+        });
+
+    if (
+      chunkRows.length !==
+      embeddedChunks.length
+    ) {
+      throw new Error(
+        `Chunk persistence mismatch: expected ${embeddedChunks.length}, inserted ${chunkRows.length}`,
+      );
+    }
+
+    const persistedChunks =
+      embeddedChunks.map(
+        (chunk, index) => ({
+          ...chunk,
+          id:
+            chunkRows[index].id,
+        }),
+      );
+
     await vectorStore.addChunks(
-      embeddedChunks,
+      persistedChunks,
       documentId,
       {
-        visibility: input.visibility ?? "private",
-        sectorIds: input.sectorIds ?? [],
+        visibility:
+          input.visibility ??
+          "private",
+        sectorIds:
+          input.sectorIds ?? [],
         sourceType,
-        sourceUrl: input.sourceUrl,
-        externalId: input.externalId,
+        sourceUrl:
+          input.sourceUrl,
+        externalId:
+          input.externalId,
       },
     );
 
@@ -203,7 +343,12 @@ export async function ingestDocument(
       .set({
         status: "processed",
       })
-      .where(eq(documents.id, documentId));
+      .where(
+        eq(
+          documents.id,
+          documentId,
+        ),
+      );
 
     logger.info(
       `Document ${documentId} processed successfully`,
@@ -212,7 +357,8 @@ export async function ingestDocument(
     return {
       outcome: "processed",
       documentId,
-      numChunks: embeddedChunks.length,
+      numChunks:
+        persistedChunks.length,
       totalChars: text.length,
     };
   } catch (error) {
@@ -220,7 +366,21 @@ export async function ingestDocument(
       .deleteByDocumentId(documentId)
       .catch((cleanupError) => {
         logger.error(
-          `Compensation cleanup failed for document ${documentId}: ${cleanupError}`,
+          `Qdrant cleanup failed for document ${documentId}: ${cleanupError}`,
+        );
+      });
+
+    await db
+      .delete(documentChunks)
+      .where(
+        eq(
+          documentChunks.documentId,
+          documentId,
+        ),
+      )
+      .catch((cleanupError) => {
+        logger.error(
+          `PostgreSQL chunk cleanup failed for document ${documentId}: ${cleanupError}`,
         );
       });
 
@@ -229,7 +389,12 @@ export async function ingestDocument(
       .set({
         status: "failed",
       })
-      .where(eq(documents.id, documentId));
+      .where(
+        eq(
+          documents.id,
+          documentId,
+        ),
+      );
 
     logger.error(
       `Ingestion failed for document ${documentId}: ${error}`,

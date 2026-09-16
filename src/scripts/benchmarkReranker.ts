@@ -1,115 +1,190 @@
-import { QdrantClient } from "@qdrant/js-client-rest";
-import { embeddingService } from "../lib/embeddings.js";
+import { hybridSearchService } from "../lib/search/hybridSearch.js";
 import { rerankerService } from "../lib/reranker.js";
-import type { SearchResult } from "../types/index.js";
 
-const COLLECTION_NAME = "vrtech_knowledge";
+import type { SearchResult } from "../types/index.js";
 
 const RETRIEVAL_K = 30;
 const FINAL_K = 5;
 
-const client = new QdrantClient({
-  url: process.env.QDRANT_URL || "http://localhost:6333",
-});
+/**
+ * Quantas perguntas serão executadas neste benchmark.
+ *
+ * 1 = teste seguro com apenas uma pergunta.
+ * 6 = benchmark completo.
+ */
+const BENCHMARK_LIMIT = 6;
 
-const questions = [
-  "como ajustar o estoque no etrade?",
-  "contagem de estoque",
-  "como fazer contagem de estoque?",
-  "contagem de estoque no etrade",
-  "ajustar estoque através da contagem de estoque",
-  "gerar movimento de entrada e saída na contagem de estoque",
+interface BenchmarkQuestion {
+  question: string;
+  expectedFiles: string[];
+}
+
+const questions: BenchmarkQuestion[] = [
+  {
+    question: "como ajustar o estoque no etrade?",
+    expectedFiles: [
+      "Contagem de estoquepor seleçõescomo classe, sub,marca, etc....transcript.txt",
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt",
+      "Contar estoque utilizando celular.transcript.txt",
+    ],
+  },
+  {
+    question: "contagem de estoque",
+    expectedFiles: [
+      "Contagem de estoquepor seleçõescomo classe, sub,marca, etc....transcript.txt",
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt",
+      "Contar estoque utilizando celular.transcript.txt",
+    ],
+  },
+  {
+    question: "como fazer contagem de estoque?",
+    expectedFiles: [
+      "Contagem de estoquepor seleçõescomo classe, sub,marca, etc....transcript.txt",
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt",
+      "Contar estoque utilizando celular.transcript.txt",
+    ],
+  },
+  {
+    question: "contagem de estoque no etrade",
+    expectedFiles: [
+      "Contagem de estoquepor seleçõescomo classe, sub,marca, etc....transcript.txt",
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt",
+      "Contar estoque utilizando celular.transcript.txt",
+    ],
+  },
+  {
+    question: "ajustar estoque através da contagem de estoque",
+    expectedFiles: [
+      "Contagem de estoquepor seleçõescomo classe, sub,marca, etc....transcript.txt",
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt",
+      "Contar estoque utilizando celular.transcript.txt",
+    ],
+  },
+  {
+    question:
+      "gerar movimento de entrada e saída na contagem de estoque",
+    expectedFiles: [
+      "Gerar movimento entrada e saída na contagem de estoque.transcript.txt",
+      "Contagem de estoquepor seleções como classe, sub,marca, etc....transcript.txt",
+    ],
+  },
 ];
 
-async function searchCandidates(
-  question: string,
-): Promise<SearchResult[]> {
-  const queryEmbedding =
-    await embeddingService.generate(question);
+const benchmarkQuestions = questions.slice(
+  0,
+  Math.min(BENCHMARK_LIMIT, questions.length),
+);
 
-  const results = await client.query(
-    COLLECTION_NAME,
-    {
-      query: queryEmbedding,
-      limit: RETRIEVAL_K,
-      score_threshold: 0,
-      with_payload: true,
-      with_vector: true,
-    },
+function normalizeFilename(filename: string): string {
+  return filename
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function isExpectedFile(
+  filename: string,
+  expectedFiles: string[],
+): boolean {
+  const normalizedFilename =
+    normalizeFilename(filename);
+
+  return expectedFiles.some(
+    (expectedFile) =>
+      normalizedFilename ===
+      normalizeFilename(expectedFile),
+  );
+}
+
+function findRank(
+  results: SearchResult[],
+  expectedFiles: string[],
+): number | null {
+  const index = results.findIndex((result) =>
+    isExpectedFile(
+      result.chunk.source_file,
+      expectedFiles,
+    ),
   );
 
-  return results.points.map((result: any) => ({
-    chunk: {
-      id:
-        result.payload?.id ??
-        String(result.id),
+  return index === -1 ? null : index + 1;
+}
 
-      text:
-        result.payload?.text ??
-        "",
-
-      source_file:
-        result.payload?.source_file ??
-        "",
-
-      chunk_index:
-        result.payload?.chunk_index ??
-        0,
-
-      char_start:
-        result.payload?.char_start ??
-        0,
-
-      char_end:
-        result.payload?.char_end ??
-        0,
-
-      embedding:
-        result.vector ?? [],
+function printHybridResults(
+  results: Awaited<
+    ReturnType<typeof hybridSearchService.search>
+  >,
+): void {
+  results.slice(0, 10).forEach(
+    (result, index) => {
+      console.log(
+        `#${index + 1} | RRF=${result.rrf_score.toFixed(
+          6,
+        )} | dense=${
+          result.dense_score === null
+            ? "-"
+            : result.dense_score.toFixed(4)
+        } | lexical=${
+          result.lexical_score === null
+            ? "-"
+            : result.lexical_score.toFixed(4)
+        } | ${result.chunk.source_file} | chunk=${result.chunk.chunk_index}`,
+      );
     },
-
-    similarity_score:
-      Number(result.score),
-  }));
+  );
 }
 
-function printResults(
-  title: string,
+function printRerankedResults(
   results: SearchResult[],
-) {
-  console.log(`\n${title}`);
-  console.log("========================================");
+  expectedFiles: string[],
+): void {
+  results.slice(0, FINAL_K).forEach(
+    (result, index) => {
+      const expected = isExpectedFile(
+        result.chunk.source_file,
+        expectedFiles,
+      );
 
-  results.forEach((result, index) => {
-    console.log(
-      `\n#${index + 1} | score=${result.similarity_score.toFixed(4)}`,
-    );
+      console.log(
+        `#${index + 1} | reranker=${result.similarity_score.toFixed(
+          4,
+        )} | ${
+          expected ? "✅ ESPERADO" : "❌"
+        } | ${result.chunk.source_file} | chunk=${result.chunk.chunk_index}`,
+      );
 
-    console.log(
-      `arquivo: ${result.chunk.source_file}`,
-    );
+      const text = result.chunk.text
+        .replace(/\s+/g, " ")
+        .trim();
 
-    console.log(
-      `chunk: ${result.chunk.chunk_index}`,
-    );
-
-    const text = result.chunk.text
-      .replace(/\s+/g, " ")
-      .trim();
-
-    console.log(
-      text.substring(0, 350),
-    );
-  });
+      console.log(
+        `   ${text.substring(0, 250)}`,
+      );
+    },
+  );
 }
 
-async function main() {
-  console.log("\n========================================");
-  console.log("BENCHMARK DO RERANKER");
-  console.log("========================================");
+async function main(): Promise<void> {
+  console.log(
+    "\n========================================",
+  );
 
   console.log(
-    `Coleção: ${COLLECTION_NAME}`,
+    "BENCHMARK HYBRID SEARCH + RERANKER",
+  );
+
+  console.log(
+    "========================================",
+  );
+
+  console.log(
+    `Perguntas configuradas: ${questions.length}`,
+  );
+
+  console.log(
+    `Perguntas executadas: ${benchmarkQuestions.length}`,
   );
 
   console.log(
@@ -120,49 +195,181 @@ async function main() {
     `Final K: ${FINAL_K}`,
   );
 
-  for (const question of questions) {
-    console.log("\n\n========================================");
-    console.log(`PERGUNTA: ${question}`);
-    console.log("========================================");
+  console.log(
+    "\n⚠️ Modo controlado: executando apenas",
+  );
+
+  console.log(
+    `${benchmarkQuestions.length} pergunta(s).`,
+  );
+
+  let hybridRecallSuccess = 0;
+  let rerankerRecallSuccess = 0;
+
+  const reciprocalRanks: number[] = [];
+
+  for (const benchmark of benchmarkQuestions) {
+    console.log(
+      "\n\n========================================",
+    );
 
     console.log(
-      "\nBuscando candidatos no Qdrant...",
-    );
-
-    const candidates =
-      await searchCandidates(question);
-
-    printResults(
-      `TOP ${RETRIEVAL_K} — QDRANT`,
-      candidates,
+      `PERGUNTA: ${benchmark.question}`,
     );
 
     console.log(
-      "\nExecutando reranking...",
+      "========================================",
     );
 
-    const reranked =
+    console.log(
+      "\n1. HYBRID SEARCH",
+    );
+
+    console.log(
+      "----------------------------------------",
+    );
+
+    const hybridResults =
+      await hybridSearchService.search(
+        benchmark.question,
+        RETRIEVAL_K,
+      );
+
+    const hybridRank = findRank(
+      hybridResults,
+      benchmark.expectedFiles,
+    );
+
+    if (hybridRank === null) {
+      console.log(
+        `❌ Documento esperado NÃO encontrado no Top ${RETRIEVAL_K}`,
+      );
+    } else {
+      console.log(
+        `✅ Melhor documento esperado no Hybrid: #${hybridRank}`,
+      );
+
+      hybridRecallSuccess++;
+    }
+
+    printHybridResults(hybridResults);
+
+    console.log(
+      "\n2. RERANKER",
+    );
+
+    console.log(
+      "----------------------------------------",
+    );
+
+    console.log(
+      `Enviando ${hybridResults.length} candidatos para o reranker...`,
+    );
+
+    const rerankedResults =
       await rerankerService.rerank(
-        question,
-        candidates,
+        benchmark.question,
+        hybridResults,
       );
 
     const finalResults =
-      reranked.slice(0, FINAL_K);
+      rerankedResults.slice(0, FINAL_K);
 
-    printResults(
-      `TOP ${FINAL_K} — APÓS RERANKING`,
+    const rerankerRank = findRank(
       finalResults,
+      benchmark.expectedFiles,
+    );
+
+    if (rerankerRank === null) {
+      console.log(
+        `❌ Documento esperado NÃO encontrado no Top ${FINAL_K} após reranking`,
+      );
+    } else {
+      console.log(
+        `✅ Melhor documento esperado após reranking: #${rerankerRank}`,
+      );
+
+      rerankerRecallSuccess++;
+
+      reciprocalRanks.push(
+        1 / rerankerRank,
+      );
+    }
+
+    printRerankedResults(
+      finalResults,
+      benchmark.expectedFiles,
     );
   }
 
-  console.log("\n========================================");
-  console.log("BENCHMARK FINALIZADO");
-  console.log("========================================");
+  const totalQuestions =
+    benchmarkQuestions.length;
+
+  const hybridRecall =
+    totalQuestions === 0
+      ? 0
+      : hybridRecallSuccess / totalQuestions;
+
+  const rerankerRecall =
+    totalQuestions === 0
+      ? 0
+      : rerankerRecallSuccess / totalQuestions;
+
+  const mrr =
+    totalQuestions === 0
+      ? 0
+      : reciprocalRanks.reduce(
+          (sum, value) => sum + value,
+          0,
+        ) / totalQuestions;
+
+  console.log(
+    "\n\n========================================",
+  );
+
+  console.log(
+    "RESULTADO FINAL",
+  );
+
+  console.log(
+    "========================================",
+  );
+
+  console.log(
+    `Hybrid Recall@${RETRIEVAL_K}: ${hybridRecallSuccess}/${totalQuestions} (${(
+      hybridRecall * 100
+    ).toFixed(1)}%)`,
+  );
+
+  console.log(
+    `Reranker Recall@${FINAL_K}: ${rerankerRecallSuccess}/${totalQuestions} (${(
+      rerankerRecall * 100
+    ).toFixed(1)}%)`,
+  );
+
+  console.log(
+    `MRR@${FINAL_K}: ${mrr.toFixed(4)}`,
+  );
+
+  console.log(
+    "\n========================================",
+  );
+
+  console.log(
+    "BENCHMARK FINALIZADO",
+  );
+
+  console.log(
+    "========================================",
+  );
 }
 
 main().catch((error) => {
-  console.error("\nBenchmark failed:");
+  console.error(
+    "\nBenchmark failed:",
+  );
+
   console.error(error);
+
   process.exit(1);
 });

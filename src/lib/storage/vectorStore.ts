@@ -13,12 +13,14 @@ class VectorStore {
   private isInitialized = false;
 
   private async initialize() {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      return;
+    }
 
     const collections = await client.getCollections();
 
     const exists = collections.collections.some(
-      (collection: any) => collection.name === COLLECTION_NAME,
+      (collection) => collection.name === COLLECTION_NAME,
     );
 
     if (!exists) {
@@ -28,13 +30,25 @@ class VectorStore {
           distance: "Cosine",
         },
       });
+
+      logger.info(
+        `Created Qdrant collection: ${COLLECTION_NAME}`,
+      );
     }
 
     this.isInitialized = true;
   }
 
   async addChunks(
-    chunks: any[],
+    chunks: Array<{
+      id: string;
+      text: string;
+      source_file: string;
+      chunk_index: number;
+      char_start: number;
+      char_end: number;
+      embedding: number[];
+    }>,
     documentId: string,
     scope: {
       visibility: string;
@@ -47,13 +61,12 @@ class VectorStore {
     await this.initialize();
 
     const points = chunks.map((chunk) => {
-      const pointId = uuidv4();
+      const pointId = chunk.id || uuidv4();
 
       return {
         id: pointId,
         vector: chunk.embedding,
         payload: {
-          id: pointId,
           documentId,
           text: chunk.text,
           source_file: chunk.source_file,
@@ -74,10 +87,6 @@ class VectorStore {
       points,
     });
 
-    logger.info(
-      `Stored ${points.length} chunks in Qdrant for document: ${documentId}`,
-    );
-
     return documentId;
   }
 
@@ -91,7 +100,10 @@ class VectorStore {
 
     let filter = undefined;
 
-    if (allowedDocumentIds && allowedDocumentIds.length > 0) {
+    if (
+      allowedDocumentIds &&
+      allowedDocumentIds.length > 0
+    ) {
       filter = {
         should: allowedDocumentIds.map((documentId) => ({
           key: "documentId",
@@ -107,40 +119,34 @@ class VectorStore {
       limit: k,
       score_threshold: threshold,
       with_payload: true,
-      with_vector: true,
+      with_vector: false,
       filter,
     });
 
-    const searchResults = results.points.map((result: any) => ({
+    return results.points.map((result: any) => ({
       chunk: {
-        id: result.payload?.id ?? String(result.id),
+        id: String(result.id),
         text: result.payload?.text ?? "",
-        source_file: result.payload?.source_file ?? "",
-        chunk_index: result.payload?.chunk_index ?? 0,
-        char_start: result.payload?.char_start ?? 0,
-        char_end: result.payload?.char_end ?? 0,
-        embedding: result.vector,
+        source_file:
+          result.payload?.source_file ?? "",
+        chunk_index:
+          result.payload?.chunk_index ?? 0,
+        char_start:
+          result.payload?.char_start ?? 0,
+        char_end:
+          result.payload?.char_end ?? 0,
       },
       similarity_score: result.score,
     }));
-
-    logger.info(
-      `RAG retrieval completed: ${searchResults.length} results | threshold=${threshold} | k=${k}`,
-    );
-
-    searchResults.forEach((result, index) => {
-      logger.info(
-        `RAG result #${index + 1} | score=${result.similarity_score.toFixed(4)} | file=${result.chunk.source_file} | chunk=${result.chunk.chunk_index}`,
-      );
-    });
-
-    return searchResults;
   }
 
-  async deleteByDocumentId(documentId: string): Promise<void> {
+  async deleteByDocumentId(
+    documentId: string,
+  ): Promise<void> {
     await this.initialize();
 
     await client.delete(COLLECTION_NAME, {
+      wait: true,
       filter: {
         must: [
           {
@@ -152,8 +158,6 @@ class VectorStore {
         ],
       },
     });
-
-    logger.info(`Deleted all chunks for document: ${documentId}`);
   }
 
   async isEmpty(): Promise<boolean> {
@@ -165,9 +169,12 @@ class VectorStore {
   async count(): Promise<number> {
     await this.initialize();
 
-    const response = await client.count(COLLECTION_NAME, {
-      exact: true,
-    });
+    const response = await client.count(
+      COLLECTION_NAME,
+      {
+        exact: true,
+      },
+    );
 
     return response.count || 0;
   }

@@ -1,0 +1,902 @@
+[
+  {
+    "id": "q001",
+    "question": "Como localizar um produto pelo nome na tela de contagem de estoque?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q002",
+    "question": "Como ler um produto pelo código de barras na contagem de estoque?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q003",
+    "question": "É possível informar manualmente a quantidade de um produto durante a contagem de estoque?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q004",
+    "question": "Como melhorar a leitura do código de barras usando a câmera do celular?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q005",
+    "question": "A tela de contagem de estoque possui opção para efetivar a contagem?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q006",
+    "question": "A contagem de estoque realizada na Web é sincronizada com o servidor?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q007",
+    "question": "Quais informações podem ser consultadas nos relatórios da contagem de estoque?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q008",
+    "question": "É possível buscar uma contagem de estoque que já foi realizada?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q009",
+    "question": "É possível zerar o estoque diretamente pela tela de contagem do E-Trade Web?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q010",
+    "question": "Qual procedimento é apresentado para zerar o estoque antes de realizar uma contagem pelo E-Trade Web?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q011",
+    "question": "Por que o zeramento de um estoque grande deveria ser feito de forma assíncrona ou agendada?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q012",
+    "question": "O que é necessário fazer antes de iniciar uma contagem de estoque?",
+    "relevantFiles": [
+      "Web - Contagem de estoque com leitor de código pelo celular.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q013",
+    "question": "Qual é a diferença entre atualizar a quantidade e incrementar o estoque em uma contagem?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q014",
+    "question": "Se um produto possui 10 unidades e forem adicionadas 5 unidades usando a opção de incrementar estoque, qual será o resultado?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q015",
+    "question": "É possível selecionar produtos por classe para realizar uma contagem de estoque?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q016",
+    "question": "É possível adicionar mais de uma classe na mesma contagem de estoque?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q017",
+    "question": "É possível combinar filtros para selecionar somente determinados produtos para uma contagem?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q018",
+    "question": "É possível adicionar produtos na contagem já com uma quantidade definida?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q019",
+    "question": "É possível deixar produtos sem alteração durante uma contagem feita por seleção?",
+    "relevantFiles": [
+      "Contagem de estoque por seleções como classe, sub, marca, etc....transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q020",
+    "question": "É possível desefetivar uma contagem de estoque que já foi efetivada?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q021",
+    "question": "O que acontece com o estoque quando uma contagem efetivada é desefetivada?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q022",
+    "question": "A desefetivação de uma contagem restaura o estoque exatamente para o valor anterior à contagem?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q023",
+    "question": "Se o estoque era 60, a contagem foi efetivada com 65 e depois foram vendidas 10 unidades, qual será o estoque após desefetivar a contagem?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q024",
+    "question": "Como a desefetivação trata uma diferença positiva gerada pela contagem?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q025",
+    "question": "Como a desefetivação trata uma diferença negativa gerada pela contagem?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q026",
+    "question": "Qual permissão é necessária para desefetivar uma contagem de estoque?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q027",
+    "question": "O que acontece quando o usuário não possui permissão para desefetivar uma contagem?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q028",
+    "question": "Como identificar na busca se uma contagem de estoque está efetivada ou desefetivada?",
+    "relevantFiles": [
+      "Desefetivar Contagem de Estoque.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q029",
+    "question": "Como configurar o estoque mínimo de um produto?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q030",
+    "question": "O estoque mínimo pode ser configurado de forma diferente para cada filial?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q031",
+    "question": "Por que o sistema permite definir estoques mínimos diferentes para cada filial?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q032",
+    "question": "O que acontece quando o estoque de um produto fica abaixo do estoque mínimo configurado?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q033",
+    "question": "Como determinar um estoque mínimo adequado para um produto?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q034",
+    "question": "Quais fatores devem ser considerados para definir o estoque mínimo de um produto?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q035",
+    "question": "Se uma filial vende mais de determinado produto do que outra, o estoque mínimo deve necessariamente ser igual nas duas?",
+    "relevantFiles": [
+      "Estoque mínimo.transcript.txt"
+    ],
+    "category": "estoque",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q036",
+    "question": "O E-Trade Web permite cadastrar novos produtos?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q037",
+    "question": "É possível editar um produto já cadastrado pelo E-Trade Web?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q038",
+    "question": "As classes de imposto podem ser alteradas diretamente pelo E-Trade Web?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q039",
+    "question": "Como funcionam o preço e a margem na tabela de preço do cadastro de produtos?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q040",
+    "question": "Ao criar um novo produto no E-Trade Web, ele utiliza as configurações definidas no cadastro de produtos?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q041",
+    "question": "O E-Trade Web consegue localizar e carregar automaticamente um produto ao informar seu código?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q042",
+    "question": "O que acontece quando um produto criado no E-Trade Web possui um código que já existe no E-Trade?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q043",
+    "question": "Ao editar um produto pelo E-Trade Web, as informações existentes em outras abas que não são exibidas no Web são apagadas?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q044",
+    "question": "Se um produto for alterado tanto no E-Trade quanto no E-Trade Web, qual alteração será considerada após a sincronização?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q045",
+    "question": "Por que usuários que trabalham com o cadastro de produtos simultaneamente no E-Trade e no E-Trade Web podem ter problemas de alterações sobrescritas?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q046",
+    "question": "Como o suporte pode identificar quem fez a última alteração em um produto quando ocorre um conflito entre E-Trade e E-Trade Web?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q047",
+    "question": "Quais funcionalidades de cadastro de produtos já estavam disponíveis no E-Trade Web ao final da apresentação?",
+    "relevantFiles": [
+      "E-Trade web - cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q048",
+    "question": "É possível consultar a evolução do preço de um produto ao longo do tempo?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q049",
+    "question": "É possível consultar a evolução do preço de um produto em uma data ou período específico?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q050",
+    "question": "O preço atual exibido no histórico representa necessariamente um preço com desconto?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q051",
+    "question": "É possível identificar uma venda específica que provocou uma alteração de preço registrada no histórico?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q052",
+    "question": "Como identificar uma alteração de preço que ocorreu apenas em poucas vendas?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q053",
+    "question": "O histórico do produto permite consultar também a evolução do preço de custo?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q054",
+    "question": "O histórico de custo pode mostrar informações relacionadas às compras realizadas do produto?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q055",
+    "question": "Ao cadastrar um novo produto, o sistema pode preencher automaticamente a margem configurada na tabela de preço?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q056",
+    "question": "Como a margem cadastrada em uma tabela de preço pode ser utilizada para calcular o preço de venda de um produto?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q057",
+    "question": "É obrigatório aplicar a margem padrão da tabela de preço a todos os produtos?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q058",
+    "question": "As tabelas exibidas no cadastro de produto são necessariamente todas as tabelas existentes no sistema?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q059",
+    "question": "O que acontece com uma tabela de preço que deixa de estar ativa no sistema?",
+    "relevantFiles": [
+      "Nova tela de cadastro de produtos.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q060",
+    "question": "Ao importar novamente um arquivo de produtos, o estoque existente é incrementado ou substituído pelo valor informado no arquivo?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q061",
+    "question": "Se um produto possui estoque 3 e o arquivo de importação informa estoque 5, qual estoque será registrado após a importação?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q062",
+    "question": "Por que é necessário ter cuidado ao importar o campo de estoque de um arquivo de produtos?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q063",
+    "question": "Existe uma forma de desfazer imediatamente uma importação de produtos feita com dados incorretos?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q064",
+    "question": "Por que é recomendado realizar backup antes de importar produtos por arquivo TXT?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q065",
+    "question": "Como o sistema trata uma classe informada pelo nome durante a importação de produtos?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q066",
+    "question": "O que acontece quando uma classe informada no arquivo de importação ainda não existe no banco de dados?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q067",
+    "question": "A importação de produtos permite importar várias tabelas de preço e respectivos preços?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q068",
+    "question": "A ordem das colunas de preço no arquivo precisa seguir uma ordem específica para a importação funcionar?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q069",
+    "question": "É possível importar somente alguns campos do arquivo de produtos, deixando outros campos sem alteração?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q070",
+    "question": "O arquivo de importação de produtos precisa obrigatoriamente conter todos os dados disponíveis no cadastro?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q071",
+    "question": "É possível salvar uma configuração de importação para reutilizá-la posteriormente?",
+    "relevantFiles": [
+      "Import TXT de produtos como você nunca viu.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q072",
+    "question": "Para que serve a configuração de dados padrão no cadastro de produtos?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q073",
+    "question": "É obrigatório preencher todos os campos na configuração de dados padrão do cadastro de produtos?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q074",
+    "question": "Quais tipos de informações podem ser definidos como padrão para novos produtos?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q075",
+    "question": "Como os dados configurados como padrão são aplicados ao cadastrar um novo produto?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q076",
+    "question": "É possível alterar um valor padrão para um produto específico durante o cadastro?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q077",
+    "question": "Depois de configurar os dados padrão, é necessário fechar e abrir novamente a tela de cadastro para que eles sejam aplicados?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q078",
+    "question": "O que acontece com os dados padrão quando um novo produto é cadastrado após a configuração?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q079",
+    "question": "A configuração de dados padrão altera produtos que já possuem essas informações cadastradas?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q080",
+    "question": "Se um produto existente já possui um valor para um campo configurado como padrão, qual valor será utilizado ao editar esse produto?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q081",
+    "question": "Por que a configuração de dados padrão pode facilitar o trabalho de quem cadastra muitos produtos?",
+    "relevantFiles": [
+      "Configurar dados padrão no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q082",
+    "question": "É possível corrigir o CST e o CFOP de um produto depois que o movimento já foi efetivado?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q083",
+    "question": "Qual permissão o usuário precisa ter para realizar ajustes de CFOP e CST?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q084",
+    "question": "Onde é realizada a alteração de CFOP e CST em um movimento?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q085",
+    "question": "O sistema valida se o novo CFOP informado durante o ajuste está correto?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q086",
+    "question": "Qual é a diferença entre alterar o CST e o CSOSN considerando o regime tributário da empresa?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q087",
+    "question": "Quais outros códigos tributários podem ser alterados além do CST e do CFOP?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q088",
+    "question": "Depois de salvar uma alteração de CST ou CFOP, é necessário salvar o movimento novamente para aplicar a alteração?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q089",
+    "question": "O que pode acontecer com uma alteração manual de CST ou CFOP se o imposto for recalculado depois?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q090",
+    "question": "Em que momento deve ser realizado o ajuste de CST ou CFOP quando também é necessário recalcular os impostos?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q091",
+    "question": "O ajuste de CST e CFOP funciona quando o Bridge está ativo?",
+    "relevantFiles": [
+      "Ajuste de CST e CFOP no cadastro de produto.transcript.txt"
+    ],
+    "category": "cadastro_produtos",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q092",
+    "question": "Como habilitar a consulta de produtos na tela inicial do PDV?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q093",
+    "question": "É necessário reiniciar o aplicativo do PDV depois de habilitar a consulta de produtos?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q094",
+    "question": "Quais informações podem ser configuradas para aparecer na tela de consulta de produtos do PDV?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q095",
+    "question": "É possível consultar um produto no PDV pelo nome ou pelo código de barras?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q096",
+    "question": "O leitor de código de barras pode ser utilizado na tela de consulta de preço do PDV?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q097",
+    "question": "Por que a consulta de preço na tela inicial do PDV reduz o risco de adicionar acidentalmente um produto à venda?",
+    "relevantFiles": [
+      "Habilitar o busca preço de produto no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "hard"
+  },
+  {
+    "id": "q098",
+    "question": "É possível filtrar o relatório de produtos vendidos do PDV por operador?",
+    "relevantFiles": [
+      "Relatório venda de produtos no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "easy"
+  },
+  {
+    "id": "q099",
+    "question": "Quais informações são apresentadas no relatório de resumo de produtos vendidos do PDV?",
+    "relevantFiles": [
+      "Relatório venda de produtos no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "medium"
+  },
+  {
+    "id": "q100",
+    "question": "Quais filtros de período podem ser utilizados no relatório de produtos vendidos do PDV?",
+    "relevantFiles": [
+      "Relatório venda de produtos no PDV.transcript.txt"
+    ],
+    "category": "pdv",
+    "difficulty": "medium"
+  }
+]

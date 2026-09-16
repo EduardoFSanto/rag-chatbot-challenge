@@ -10,23 +10,37 @@ env.cacheDir = "./.cache";
 
 const MODEL = "SugoLabs/mmarco-mMiniLMv2-L12-H384-v1";
 
-let tokenizer: Awaited<
-  ReturnType<typeof AutoTokenizer.from_pretrained>
-> | null = null;
+const BATCH_SIZE = 4;
+const MAX_LENGTH = 384;
 
-let model: Awaited<
-  ReturnType<typeof AutoModelForSequenceClassification.from_pretrained>
-> | null = null;
+let tokenizer:
+  | Awaited<
+      ReturnType<typeof AutoTokenizer.from_pretrained>
+    >
+  | null = null;
+
+let model:
+  | Awaited<
+      ReturnType<
+        typeof AutoModelForSequenceClassification.from_pretrained
+      >
+    >
+  | null = null;
 
 async function initializeReranker() {
   if (!tokenizer) {
-    console.log(`Loading reranker tokenizer: ${MODEL}`);
+    console.log(
+      `Loading reranker tokenizer: ${MODEL}`,
+    );
 
-    tokenizer = await AutoTokenizer.from_pretrained(MODEL);
+    tokenizer =
+      await AutoTokenizer.from_pretrained(MODEL);
   }
 
   if (!model) {
-    console.log(`Loading reranker model: ${MODEL}`);
+    console.log(
+      `Loading reranker model: ${MODEL}`,
+    );
 
     model =
       await AutoModelForSequenceClassification.from_pretrained(
@@ -46,6 +60,50 @@ async function initializeReranker() {
   };
 }
 
+async function scoreBatch(
+  question: string,
+  results: SearchResult[],
+  tokenizerInstance: NonNullable<
+    typeof tokenizer
+  >,
+  modelInstance: NonNullable<
+    typeof model
+  >,
+): Promise<number[]> {
+  const passages = results.map(
+    (result) => result.chunk.text,
+  );
+
+  if (passages.length === 0) {
+    return [];
+  }
+
+  const questions = new Array(
+    passages.length,
+  ).fill(question);
+
+  const inputs = tokenizerInstance(
+    questions,
+    {
+      text_pair: passages,
+      padding: true,
+      truncation: true,
+      max_length: MAX_LENGTH,
+    },
+  );
+
+  const { logits } =
+    await modelInstance(inputs);
+
+  const scores = (await logits
+    .sigmoid()
+    .tolist()) as number[][];
+
+  return scores.map((score) =>
+    Number(score?.[0] ?? 0),
+  );
+}
+
 export const rerankerService = {
   async rerank(
     question: string,
@@ -56,34 +114,55 @@ export const rerankerService = {
     }
 
     try {
-      const { tokenizer, model } =
-        await initializeReranker();
+      const {
+        tokenizer: tokenizerInstance,
+        model: modelInstance,
+      } = await initializeReranker();
 
-      const passages = results.map(
-        (result) => result.chunk.text,
-      );
+      if (!tokenizerInstance || !modelInstance) {
+        throw new Error(
+          "Reranker model failed to initialize",
+        );
+      }
 
-      const inputs = tokenizer(
-        new Array(passages.length).fill(question),
-        {
-          text_pair: passages,
-          padding: true,
-          truncation: true,
-          max_length: 512,
-        },
-      );
+      const scoredResults: Array<{
+        result: SearchResult;
+        score: number;
+      }> = [];
 
-      const { logits } = await model(inputs);
+      for (
+        let start = 0;
+        start < results.length;
+        start += BATCH_SIZE
+      ) {
+        const batch = results.slice(
+          start,
+          start + BATCH_SIZE,
+        );
 
-      const scores = (await logits
-        .sigmoid()
-        .tolist()) as number[][];
+        console.log(
+          `Reranking candidates ${start + 1}-${Math.min(
+            start + BATCH_SIZE,
+            results.length,
+          )} of ${results.length}...`,
+        );
 
-      return results
-        .map((result, index) => ({
-          result,
-          score: Number(scores[index]?.[0] ?? 0),
-        }))
+        const scores = await scoreBatch(
+          question,
+          batch,
+          tokenizerInstance,
+          modelInstance,
+        );
+
+        batch.forEach((result, index) => {
+          scoredResults.push({
+            result,
+            score: scores[index] ?? 0,
+          });
+        });
+      }
+
+      return scoredResults
         .sort((a, b) => b.score - a.score)
         .map(({ result, score }) => ({
           ...result,
