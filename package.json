@@ -16,7 +16,10 @@
     "youtube:retry": "tsx src/scripts/retryFailedYoutube.ts",
     "test": "vitest run",
     "search:lexical:benchmark": "tsx src/scripts/benchmarkLexicalSearch.ts",
-    "search:hybrid:benchmark": "tsx src/scripts/benchmarkHybridSearch.ts" 
+    "search:hybrid:benchmark": "tsx src/scripts/benchmarkHybridSearch.ts",
+    "search:diagnostic:benchmark": "tsx src/scripts/benchmarkRetrievalDiagnostic.ts",
+    "search:rrf:benchmark": "tsx src/scripts/benchmarkRrfTuning.ts",
+    "search:rrf:reranker": "tsx src/scripts/benchmarkRrfReranker.ts"
   },
   "keywords": [],
   "author": "",
