@@ -7,7 +7,6 @@ import { rerankerService } from "../../lib/reranker.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
 import { promptService } from "../../lib/prompt.js";
-import { llmService } from "../../lib/llm.js";
 import { documentRepository } from "../documents/document.repository.js";
 
 interface ProcessQueryInput {
@@ -114,11 +113,16 @@ export const queryService = {
       };
     }
 
-    // Hybrid is responsible for coverage. The reranker is responsible
-    // only for ordering the candidate set before the LLM sees it.
+    // Hybrid is responsible for coverage. Reranker only orders the
+    // configured reranker candidate pool before the LLM sees the evidence.
+    const rerankerCandidates = hybridResults.slice(
+      0,
+      Math.min(config.rag.rerankerK, hybridResults.length),
+    );
+
     const rerankedResults = await rerankerService.rerank(
       question,
-      hybridResults,
+      rerankerCandidates,
     );
 
     const finalResults = rerankedResults.slice(
@@ -157,9 +161,7 @@ export const queryService = {
     }
 
     const prompt = promptService.build(question, finalResults);
-    const aiResponseText = await import("../../lib/llm.js").then(
-      ({ llmService }) => llmService.generate(prompt),
-    );
+    const aiResponseText = await llmService.generate(prompt);
 
     const maxRerankerScore =
       finalResults[0]?.similarity_score ?? 0;
@@ -192,7 +194,7 @@ export const queryService = {
       .where(eq(conversations.id, currentConversationId));
 
     logger.info(
-      `Query processed for conversation ${currentConversationId}: candidates=${hybridResults.length}, final=${finalResults.length}`,
+      `Query processed for conversation ${currentConversationId}: candidates=${hybridResults.length}, reranked=${rerankedResults.length}, final=${finalResults.length}`,
     );
 
     return {
