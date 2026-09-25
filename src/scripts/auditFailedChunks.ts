@@ -19,24 +19,44 @@ const DATASET_PATH = resolve(
   "src/evaluation/datasets/rag-evaluation.json",
 );
 
-const REPORT_PATH = resolve(
-  process.cwd(),
-  "src/evaluation/reports/retrieval-consolidated.json",
-);
-
-interface BenchmarkQuestionReport {
-  id: string;
-  coverage: {
-    denseFound: boolean;
-    lexicalFound: boolean;
-    hybridFound: boolean;
-  };
-  diagnosis: string[];
-}
-
-interface BenchmarkReport {
-  questions: BenchmarkQuestionReport[];
-}
+// Baseline válido do benchmark de retrieval usado para esta investigação.
+// O relatório local foi sobrescrito por uma execução inválida (Qdrant indisponível),
+// então a auditoria deve usar explicitamente os 33 misses confirmados.
+const FAILED_IDS = new Set([
+  "q001",
+  "q002",
+  "q007",
+  "q009",
+  "q014",
+  "q019",
+  "q022",
+  "q030",
+  "q034",
+  "q035",
+  "q041",
+  "q042",
+  "q046",
+  "q047",
+  "q054",
+  "q058",
+  "q060",
+  "q061",
+  "q063",
+  "q070",
+  "q072",
+  "q077",
+  "q079",
+  "q080",
+  "q081",
+  "q082",
+  "q086",
+  "q087",
+  "q088",
+  "q089",
+  "q091",
+  "q095",
+  "q096",
+]);
 
 
 function normalizeFilename(
@@ -336,22 +356,8 @@ async function main(): Promise<void> {
   const dataset =
     await loadDataset();
 
-  const reportRaw = await readFile(
-    REPORT_PATH,
-    "utf8",
-  );
-
-  const benchmarkReport =
-    JSON.parse(reportRaw) as BenchmarkReport;
-
-  const failedIds = new Set(
-    benchmarkReport.questions
-      .filter((question) => !question.coverage.hybridFound)
-      .map((question) => question.id),
-  );
-
   const questions = dataset.filter(
-    (question) => failedIds.has(question.id),
+    (question) => FAILED_IDS.has(question.id),
   );
 
   console.log(
@@ -359,7 +365,7 @@ async function main(): Promise<void> {
   );
 
   console.log(
-    `Fonte das falhas: ${REPORT_PATH}`,
+    "Fonte das falhas: baseline válido — 33 Hybrid misses confirmados no benchmark original",
   );
 
   for (const question of questions) {
