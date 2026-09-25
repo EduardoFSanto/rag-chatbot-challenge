@@ -19,7 +19,9 @@
     "search:hybrid:benchmark": "tsx src/scripts/benchmarkHybridSearch.ts",
     "search:diagnostic:benchmark": "tsx src/scripts/benchmarkRetrievalDiagnostic.ts",
     "search:rrf:benchmark": "tsx src/scripts/benchmarkRrfTuning.ts",
-    "search:rrf:reranker": "tsx src/scripts/benchmarkRrfReranker.ts"
+    "search:rrf:reranker": "tsx src/scripts/benchmarkRrfReranker.ts",
+    "search:chunks:audit": "tsx src/scripts/auditFailedChunks.ts",
+    "search:report": "tsx src/scripts/benchmarkRetrievalReport.ts"
   },
   "keywords": [],
   "author": "",
