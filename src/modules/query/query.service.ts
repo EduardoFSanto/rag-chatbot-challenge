@@ -7,6 +7,7 @@ import { rerankerService } from "../../lib/reranker.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
 import { promptService } from "../../lib/prompt.js";
+import { llmService } from "../../lib/llm.js";
 import { documentRepository } from "../documents/document.repository.js";
 
 interface ProcessQueryInput {
@@ -128,21 +129,15 @@ export const queryService = {
     // Guardrail: require at least one strong retrieval signal in the
     // final evidence. Dense and lexical scores are intentionally not
     // combined because they live on different scales.
-    const hasSufficientEvidence = finalResults.some(
-      (result) =>
-        (result as typeof result & {
-          dense_score?: number | null;
-          lexical_score?: number | null;
-        }).dense_score !== null &&
-        ((result as typeof result & {
-          dense_score?: number | null;
-        }).dense_score ?? 0) >=
-          config.rag.similarityThreshold ||
-        ((result as typeof result & {
-          lexical_score?: number | null;
-        }).lexical_score ?? 0) >=
-          config.rag.lexicalEvidenceThreshold,
-    );
+    const hasSufficientEvidence = finalResults.some((result) => {
+      const denseScore = result.dense_score ?? 0;
+      const lexicalScore = result.lexical_score ?? 0;
+
+      return (
+        denseScore >= config.rag.similarityThreshold ||
+        lexicalScore >= config.rag.lexicalEvidenceThreshold
+      );
+    });
 
     if (!hasSufficientEvidence) {
       await db.insert(messages).values({
