@@ -34,7 +34,6 @@ export const llmService = {
         const response = await openai.responses.create({
           model: config.llm.openai.model,
           input: prompt,
-          temperature: config.rag.llmTemperature,
           max_output_tokens: config.llm.maxOutputTokens,
         });
 
