@@ -2,9 +2,8 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { conversations } from "../../db/schema/conversations.js";
 import { messages } from "../../db/schema/messages.js";
-import { vectorStore } from "../../lib/storage/vectorStore.js";
-import { embeddingService } from "../../lib/embeddings.js";
-import { llmService } from "../../lib/llm.js";
+import { hybridSearchService } from "../../lib/search/hybridSearch.js";
+import { rerankerService } from "../../lib/reranker.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
 import { promptService } from "../../lib/prompt.js";
@@ -29,11 +28,13 @@ type QueryResult =
       conversationId: string;
     };
 
+const NO_CONTEXT_MESSAGE =
+  "Não encontrei informações suficientes na base de conhecimento.";
+
 export const queryService = {
   async processQuery(input: ProcessQueryInput): Promise<QueryResult> {
     const { question, conversationId, userId } = input;
 
-    // 1. Criar ou recuperar conversa
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
@@ -69,24 +70,20 @@ export const queryService = {
       }
     }
 
-    // 2. Salvar mensagem do usuário
     await db.insert(messages).values({
       conversationId: currentConversationId,
       role: "user",
       content: question,
     });
 
-    // 3. Buscar documentos autorizados por propriedade, empresa ou setor
     const allowedDocumentIds =
       await documentRepository.findAccessibleIds(userId);
 
-    // 4. Se não há documentos, retornar sem contexto
     if (allowedDocumentIds.length === 0) {
       await db.insert(messages).values({
         conversationId: currentConversationId,
         role: "assistant",
-        content:
-          "Não encontrei informações suficientes na base de conhecimento.",
+        content: NO_CONTEXT_MESSAGE,
         metadata: { sources: [] },
       });
 
@@ -96,35 +93,65 @@ export const queryService = {
       };
     }
 
-    // 5. Gerar embedding da pergunta
-    const queryEmbedding = await embeddingService.generate(question);
-
-    // 6. Buscar chunks no Qdrant
-    //    filtrado pelos documentos que o usuário pode acessar
-    const searchResults = await vectorStore.search(
-      queryEmbedding,
+    const hybridResults = await hybridSearchService.search(
+      question,
       config.rag.retrievalK,
-      config.rag.similarityThreshold,
       allowedDocumentIds,
     );
 
-    // 7. Verificar confiança do resultado
-    const maxScore =
-      searchResults.length > 0
-        ? searchResults[0].similarity_score
-        : 0;
-
-    const confidenceThreshold = config.rag.similarityThreshold;
-
-    if (maxScore < confidenceThreshold) {
+    if (hybridResults.length === 0) {
       await db.insert(messages).values({
         conversationId: currentConversationId,
         role: "assistant",
-        content:
-          "Não encontrei informações suficientes na base de conhecimento.",
+        content: NO_CONTEXT_MESSAGE,
+        metadata: { sources: [] },
+      });
+
+      return {
+        outcome: "no_context",
+        conversationId: currentConversationId,
+      };
+    }
+
+    // Hybrid is responsible for coverage. The reranker is responsible
+    // only for ordering the candidate set before the LLM sees it.
+    const rerankedResults = await rerankerService.rerank(
+      question,
+      hybridResults,
+    );
+
+    const finalResults = rerankedResults.slice(
+      0,
+      config.rag.finalK,
+    );
+
+    // Guardrail: require at least one strong retrieval signal in the
+    // final evidence. Dense and lexical scores are intentionally not
+    // combined because they live on different scales.
+    const hasSufficientEvidence = finalResults.some(
+      (result) =>
+        (result as typeof result & {
+          dense_score?: number | null;
+          lexical_score?: number | null;
+        }).dense_score !== null &&
+        ((result as typeof result & {
+          dense_score?: number | null;
+        }).dense_score ?? 0) >=
+          config.rag.similarityThreshold ||
+        ((result as typeof result & {
+          lexical_score?: number | null;
+        }).lexical_score ?? 0) >=
+          config.rag.lexicalEvidenceThreshold,
+    );
+
+    if (!hasSufficientEvidence) {
+      await db.insert(messages).values({
+        conversationId: currentConversationId,
+        role: "assistant",
+        content: NO_CONTEXT_MESSAGE,
         metadata: {
           sources: [],
-          maxScore,
+          retrievalCandidates: hybridResults.length,
         },
       });
 
@@ -134,30 +161,34 @@ export const queryService = {
       };
     }
 
-    // 8. Construir prompt usando o serviço especializado
-    const prompt = promptService.build(question, searchResults);
+    const prompt = promptService.build(question, finalResults);
+    const aiResponseText = await import("../../lib/llm.js").then(
+      ({ llmService }) => llmService.generate(prompt),
+    );
 
-    // 9. Gerar resposta com o LLM
-    const aiResponseText = await llmService.generate(prompt);
+    const maxRerankerScore =
+      finalResults[0]?.similarity_score ?? 0;
 
-    // 10. Preparar fontes utilizadas
-    const sources = searchResults.map((result) => ({
+    const sources = finalResults.map((result) => ({
       file: result.chunk.source_file,
       score: result.similarity_score,
     }));
 
-    // 11. Salvar resposta da IA
     await db.insert(messages).values({
       conversationId: currentConversationId,
       role: "assistant",
       content: aiResponseText,
       metadata: {
         sources,
-        maxScore,
+        maxScore: maxRerankerScore,
+        retrieval: {
+          candidates: hybridResults.length,
+          reranked: rerankedResults.length,
+          finalK: finalResults.length,
+        },
       },
     });
 
-    // 12. Atualizar timestamp da conversa
     await db
       .update(conversations)
       .set({
@@ -166,7 +197,7 @@ export const queryService = {
       .where(eq(conversations.id, currentConversationId));
 
     logger.info(
-      `Query processed for conversation ${currentConversationId}`,
+      `Query processed for conversation ${currentConversationId}: candidates=${hybridResults.length}, final=${finalResults.length}`,
     );
 
     return {
@@ -174,7 +205,7 @@ export const queryService = {
       conversationId: currentConversationId,
       answer: aiResponseText,
       sources,
-      confidence: maxScore,
+      confidence: maxRerankerScore,
     };
   },
 };
