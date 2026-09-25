@@ -7,6 +7,7 @@ import { rerankerService } from "../../lib/reranker.js";
 import { logger } from "../../lib/logger.js";
 import { config } from "../../lib/config.js";
 import { promptService } from "../../lib/prompt.js";
+import { llmService } from "../../lib/llm.js";
 import { documentRepository } from "../documents/document.repository.js";
 
 interface ProcessQueryInput {
@@ -113,8 +114,6 @@ export const queryService = {
       };
     }
 
-    // Hybrid is responsible for coverage. Reranker only orders the
-    // configured reranker candidate pool before the LLM sees the evidence.
     const rerankerCandidates = hybridResults.slice(
       0,
       Math.min(config.rag.rerankerK, hybridResults.length),
@@ -130,9 +129,6 @@ export const queryService = {
       config.rag.finalK,
     );
 
-    // Guardrail: require at least one strong retrieval signal in the
-    // final evidence. Dense and lexical scores are intentionally not
-    // combined because they live on different scales.
     const hasSufficientEvidence = finalResults.some((result) => {
       const denseScore = result.dense_score ?? 0;
       const lexicalScore = result.lexical_score ?? 0;
@@ -182,6 +178,7 @@ export const queryService = {
           candidates: hybridResults.length,
           reranked: rerankedResults.length,
           finalK: finalResults.length,
+          strategy: "hybrid-rrf-reranker",
         },
       },
     });
@@ -194,7 +191,7 @@ export const queryService = {
       .where(eq(conversations.id, currentConversationId));
 
     logger.info(
-      `Query processed for conversation ${currentConversationId}: candidates=${hybridResults.length}, reranked=${rerankedResults.length}, final=${finalResults.length}`,
+      `Query processed for conversation ${currentConversationId}: provider=${config.llm.provider}, candidates=${hybridResults.length}, reranked=${rerankedResults.length}, final=${finalResults.length}`,
     );
 
     return {
