@@ -79,6 +79,13 @@ function buildConceptQueries(question: string): string[] {
   return [...new Set(queries)];
 }
 
+function buildTermRecallQuery(question: string): string {
+  return extractTerms(question)
+    .map((term) => term.replace(/["\\]/g, ""))
+    .filter(Boolean)
+    .join(" OR ");
+}
+
 async function searchQuery(
   question: string,
   k: number,
@@ -122,7 +129,6 @@ async function searchQuery(
       charEnd: documentChunks.charEnd,
       documentId: documentChunks.documentId,
       filename: documents.filename,
-
       score: sql<number>`
         ts_rank_cd(
           ${documentChunks.searchVector},
@@ -173,11 +179,18 @@ export const lexicalSearchService = {
       return [];
     }
 
+    const terms = extractTerms(normalizedQuestion);
+
+    // Avoid sending an all-stopword query to PostgreSQL.
+    // PostgreSQL otherwise emits a NOTICE and cannot produce useful FTS matches.
+    if (terms.length === 0) {
+      return [];
+    }
+
     /*
-     * First pass:
-     * Try the complete user question.
-     *
-     * This preserves the strongest possible lexical signal.
+     * Pass 1:
+     * Complete question. This preserves the strongest exact
+     * lexical signal when the question maps cleanly to the text.
      */
     const primaryResults = await searchQuery(
       normalizedQuestion,
@@ -185,56 +198,26 @@ export const lexicalSearchService = {
       allowedDocumentIds,
     );
 
-    /*
-     * If the complete question already produced enough
-     * candidates, there is no reason to broaden the search.
-     */
     if (primaryResults.length >= k) {
       return primaryResults;
     }
 
     /*
-     * Second pass:
-     * Break the question into adjacent concept pairs.
-     *
-     * Example:
-     *
-     * "ajustar estoque através da contagem de estoque"
-     *
-     * becomes approximately:
-     *
-     * "ajustar estoque"
-     * "estoque através"
-     * "através contagem"
-     * "contagem estoque"
-     *
-     * PostgreSQL's Portuguese stemming will normalize
-     * variations such as "ajustar" -> "ajust".
+     * Pass 2:
+     * Adjacent significant-term pairs. This relaxes the
+     * all-terms-AND behavior of the complete question while
+     * retaining small concept groups.
      */
     const conceptQueries =
       buildConceptQueries(normalizedQuestion);
 
-    if (conceptQueries.length === 0) {
-      return primaryResults;
-    }
-
-    const conceptResults = await Promise.all(
-      conceptQueries.map((query) =>
-        searchQuery(
-          query,
-          k,
-          allowedDocumentIds,
+    const conceptResults =
+      await Promise.all(
+        conceptQueries.map((query) =>
+          searchQuery(query, k, allowedDocumentIds),
         ),
-      ),
-    );
+      );
 
-    /*
-     * Merge by chunk ID.
-     *
-     * A chunk appearing in multiple concept searches
-     * receives a higher score because multiple parts of
-     * the question matched the same chunk.
-     */
     const merged = new Map<
       string,
       {
@@ -259,12 +242,10 @@ export const lexicalSearchService = {
             result,
             matchedQueries: 1,
           });
-
           continue;
         }
 
         existing.matchedQueries += 1;
-
         existing.result.lexical_score = Math.max(
           existing.result.lexical_score,
           result.lexical_score,
@@ -272,29 +253,72 @@ export const lexicalSearchService = {
       }
     }
 
-    /*
-     * Re-rank using:
-     *
-     * - original lexical score
-     * - number of concept queries matched
-     *
-     * Multiple matching concepts indicate that the
-     * chunk is more representative of the question.
-     */
-    return Array.from(merged.values())
+    let mergedResults = Array.from(merged.values())
       .map(({ result, matchedQueries }) => ({
         result,
         finalScore:
           result.lexical_score +
           Math.max(0, matchedQueries - 1) * 0.05,
       }))
-      .sort(
-        (a, b) => b.finalScore - a.finalScore,
-      )
+      .sort((a, b) => b.finalScore - a.finalScore)
       .slice(0, k)
       .map(({ result, finalScore }) => ({
         ...result,
         lexical_score: finalScore,
       }));
+
+    /*
+     * Pass 3:
+     * Individual-term OR fallback.
+     *
+     * This is deliberately only used when the stricter passes
+     * did not fill the candidate pool. It improves recall for
+     * questions whose wording differs from the documentation
+     * while keeping the primary/concept ranking dominant.
+     */
+    if (mergedResults.length < k) {
+      const termQuery = buildTermRecallQuery(normalizedQuestion);
+
+      if (termQuery) {
+        const termResults = await searchQuery(
+          termQuery,
+          k,
+          allowedDocumentIds,
+        );
+
+        for (const result of termResults) {
+          const existing = merged.get(result.chunk.id);
+
+          if (!existing) {
+            merged.set(result.chunk.id, {
+              result,
+              matchedQueries: 1,
+            });
+            continue;
+          }
+
+          existing.result.lexical_score = Math.max(
+            existing.result.lexical_score,
+            result.lexical_score,
+          );
+        }
+
+        mergedResults = Array.from(merged.values())
+          .map(({ result, matchedQueries }) => ({
+            result,
+            finalScore:
+              result.lexical_score +
+              Math.max(0, matchedQueries - 1) * 0.05,
+          }))
+          .sort((a, b) => b.finalScore - a.finalScore)
+          .slice(0, k)
+          .map(({ result, finalScore }) => ({
+            ...result,
+            lexical_score: finalScore,
+          }));
+      }
+    }
+
+    return mergedResults;
   },
 };
