@@ -19,45 +19,25 @@ const DATASET_PATH = resolve(
   "src/evaluation/datasets/rag-evaluation.json",
 );
 
-const FAILED_QUESTIONS = [
-  "q001",
-  "q002",
-  "q004",
-  "q007",
-  "q009",
-  "q011",
-  "q014",
-  "q019",
-  "q022",
-  "q027",
-  "q030",
-  "q034",
-  "q035",
-  "q039",
-  "q041",
-  "q054",
-  "q055",
-  "q060",
-  "q061",
-  "q063",
-  "q065",
-  "q070",
-  "q071",
-  "q072",
-  "q074",
-  "q077",
-  "q079",
-  "q080",
-  "q081",
-  "q082",
-  "q086",
-  "q087",
-  "q089",
-  "q091",
-  "q095",
-  "q096",
-  "q100",
-];
+const REPORT_PATH = resolve(
+  process.cwd(),
+  "src/evaluation/reports/retrieval-consolidated.json",
+);
+
+interface BenchmarkQuestionReport {
+  id: string;
+  coverage: {
+    denseFound: boolean;
+    lexicalFound: boolean;
+    hybridFound: boolean;
+  };
+  diagnosis: string[];
+}
+
+interface BenchmarkReport {
+  questions: BenchmarkQuestionReport[];
+}
+
 
 function normalizeFilename(
   filename: string,
@@ -356,16 +336,30 @@ async function main(): Promise<void> {
   const dataset =
     await loadDataset();
 
-  const questions =
-    dataset.filter(
-      (question) =>
-        FAILED_QUESTIONS.includes(
-          question.id,
-        ),
-    );
+  const reportRaw = await readFile(
+    REPORT_PATH,
+    "utf8",
+  );
+
+  const benchmarkReport =
+    JSON.parse(reportRaw) as BenchmarkReport;
+
+  const failedIds = new Set(
+    benchmarkReport.questions
+      .filter((question) => !question.coverage.hybridFound)
+      .map((question) => question.id),
+  );
+
+  const questions = dataset.filter(
+    (question) => failedIds.has(question.id),
+  );
 
   console.log(
     `Perguntas para auditoria: ${questions.length}`,
+  );
+
+  console.log(
+    `Fonte das falhas: ${REPORT_PATH}`,
   );
 
   for (const question of questions) {
