@@ -10,7 +10,7 @@ env.cacheDir = "./.cache";
 
 const MODEL = "SugoLabs/mmarco-mMiniLMv2-L12-H384-v1";
 const BATCH_SIZE = 4;
-const MAX_LENGTH = 384;
+const MAX_LENGTH = 512;
 
 let tokenizer:
   | Awaited<ReturnType<typeof AutoTokenizer.from_pretrained>>
