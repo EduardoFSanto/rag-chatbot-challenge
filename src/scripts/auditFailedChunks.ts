@@ -19,32 +19,31 @@ const DATASET_PATH = resolve(
   "src/evaluation/datasets/rag-evaluation.json",
 );
 
-const FAILED_QUESTIONS = [
+// Baseline válido do benchmark de retrieval usado para esta investigação.
+// O relatório local foi sobrescrito por uma execução inválida (Qdrant indisponível),
+// então a auditoria deve usar explicitamente os 33 misses confirmados.
+const FAILED_IDS = new Set([
   "q001",
   "q002",
-  "q004",
   "q007",
   "q009",
-  "q011",
   "q014",
   "q019",
   "q022",
-  "q027",
   "q030",
   "q034",
   "q035",
-  "q039",
   "q041",
+  "q042",
+  "q046",
+  "q047",
   "q054",
-  "q055",
+  "q058",
   "q060",
   "q061",
   "q063",
-  "q065",
   "q070",
-  "q071",
   "q072",
-  "q074",
   "q077",
   "q079",
   "q080",
@@ -52,12 +51,13 @@ const FAILED_QUESTIONS = [
   "q082",
   "q086",
   "q087",
+  "q088",
   "q089",
   "q091",
   "q095",
   "q096",
-  "q100",
-];
+]);
+
 
 function normalizeFilename(
   filename: string,
@@ -356,16 +356,16 @@ async function main(): Promise<void> {
   const dataset =
     await loadDataset();
 
-  const questions =
-    dataset.filter(
-      (question) =>
-        FAILED_QUESTIONS.includes(
-          question.id,
-        ),
-    );
+  const questions = dataset.filter(
+    (question) => FAILED_IDS.has(question.id),
+  );
 
   console.log(
     `Perguntas para auditoria: ${questions.length}`,
+  );
+
+  console.log(
+    "Fonte das falhas: baseline válido — 33 Hybrid misses confirmados no benchmark original",
   );
 
   for (const question of questions) {

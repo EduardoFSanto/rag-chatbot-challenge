@@ -8,3 +8,8 @@ uploads/
 .env
 *_cookies.txt
 teste*.txt
+
+# Local benchmark and diagnostic outputs
+benchmark-*.txt
+diagnostic-*.txt
+src/evaluation/reports/chunks-audit-*.txt
