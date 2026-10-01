@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
       },
     },
     insert: vi.fn(),
+    delete: vi.fn(),
+    transaction: vi.fn(),
     update: vi.fn(),
   },
 
@@ -68,8 +70,18 @@ function createInsertMock(documentId = "document-1") {
     },
   ]);
 
-  const values = vi.fn().mockReturnValue({
-    returning,
+  const values = vi.fn().mockImplementation((records) => {
+    const count = Array.isArray(records) ? records.length : 1;
+
+    returning.mockResolvedValue(
+      Array.from({ length: count }, (_, index) => ({
+        id: index === 0
+          ? documentId
+          : `${documentId}-chunk-${index}`,
+      })),
+    );
+
+    return { returning };
   });
 
   mocks.db.insert.mockReturnValue({
@@ -101,6 +113,17 @@ describe("ingestDocument", () => {
 
     createInsertMock();
     createUpdateMock();
+
+    mocks.db.delete.mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    });
+    mocks.db.transaction.mockImplementation(async (callback) =>
+      callback({
+        insert: mocks.db.insert,
+        delete: mocks.db.delete,
+        update: mocks.db.update,
+      }),
+    );
 
     mocks.fileParser.extract.mockResolvedValue(
       "Texto extraído do documento",
@@ -167,6 +190,7 @@ describe("ingestDocument", () => {
       documentId: "document-existing",
     });
 
+    expect(mocks.db.transaction).not.toHaveBeenCalled();
     expect(mocks.db.insert).not.toHaveBeenCalled();
     expect(mocks.fileParser.extract).not.toHaveBeenCalled();
     expect(mocks.embeddingService.generate).not.toHaveBeenCalled();
@@ -187,6 +211,7 @@ describe("ingestDocument", () => {
       documentId: "document-existing",
     });
 
+    expect(mocks.db.transaction).not.toHaveBeenCalled();
     expect(mocks.db.insert).not.toHaveBeenCalled();
     expect(mocks.fileParser.extract).not.toHaveBeenCalled();
     expect(mocks.vectorStore.addChunks).not.toHaveBeenCalled();
@@ -208,7 +233,8 @@ describe("ingestDocument", () => {
       totalChars: 27,
     });
 
-    expect(mocks.db.insert).not.toHaveBeenCalled();
+    expect(mocks.db.transaction).not.toHaveBeenCalled();
+    expect(mocks.db.insert).toHaveBeenCalledTimes(1);
 
     expect(mocks.vectorStore.deleteByDocumentId).toHaveBeenCalledWith(
       "document-failed",

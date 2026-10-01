@@ -21,7 +21,7 @@ export const config = {
     },
     openai: {
       apiKey: process.env.OPENAI_API_KEY || "",
-      model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
     },
     maxOutputTokens: Number(
       process.env.LLM_MAX_OUTPUT_TOKENS || 2048,

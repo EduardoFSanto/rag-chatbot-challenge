@@ -119,10 +119,20 @@ export const queryService = {
       Math.min(config.rag.rerankerK, hybridResults.length),
     );
 
-    const rerankedResults = await rerankerService.rerank(
-      question,
-      rerankerCandidates,
-    );
+    let rerankedResults;
+
+    try {
+      rerankedResults = await rerankerService.rerank(
+        question,
+        rerankerCandidates,
+      );
+    } catch (error) {
+      logger.warn(
+        "Reranker unavailable; falling back to hybrid ranking",
+        error,
+      );
+      rerankedResults = rerankerCandidates;
+    }
 
     const finalResults = rerankedResults.slice(
       0,

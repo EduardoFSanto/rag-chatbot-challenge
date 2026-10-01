@@ -11,12 +11,12 @@ const mocks = vi.hoisted(() => ({
     update: vi.fn(),
   },
 
-  vectorStore: {
+  hybridSearchService: {
     search: vi.fn(),
   },
 
-  embeddingService: {
-    generate: vi.fn(),
+  rerankerService: {
+    rerank: vi.fn(),
   },
 
   llmService: {
@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
 
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
@@ -36,12 +37,12 @@ vi.mock("../src/db/index.js", () => ({
   db: mocks.db,
 }));
 
-vi.mock("../src/lib/storage/vectorStore.js", () => ({
-  vectorStore: mocks.vectorStore,
+vi.mock("../src/lib/search/hybridSearch.js", () => ({
+  hybridSearchService: mocks.hybridSearchService,
 }));
 
-vi.mock("../src/lib/embeddings.js", () => ({
-  embeddingService: mocks.embeddingService,
+vi.mock("../src/lib/reranker.js", () => ({
+  rerankerService: mocks.rerankerService,
 }));
 
 vi.mock("../src/lib/llm.js", () => ({
@@ -82,9 +83,10 @@ describe("queryService.processQuery", () => {
 
     mocks.documentRepository.findAccessibleIds.mockResolvedValue([]);
 
-    mocks.embeddingService.generate.mockResolvedValue([0.1, 0.2, 0.3]);
-
-    mocks.vectorStore.search.mockResolvedValue([]);
+    mocks.hybridSearchService.search.mockResolvedValue([]);
+    mocks.rerankerService.rerank.mockImplementation(
+      async (_question, results) => results,
+    );
 
     mocks.llmService.generate.mockResolvedValue("Resposta da IA");
   });
@@ -129,8 +131,8 @@ describe("queryService.processQuery", () => {
       conversationId: "conversation-1",
     });
 
-    expect(mocks.embeddingService.generate).not.toHaveBeenCalled();
-    expect(mocks.vectorStore.search).not.toHaveBeenCalled();
+    expect(mocks.hybridSearchService.search).not.toHaveBeenCalled();
+    expect(mocks.rerankerService.rerank).not.toHaveBeenCalled();
     expect(mocks.llmService.generate).not.toHaveBeenCalled();
   });
 
@@ -144,16 +146,21 @@ describe("queryService.processQuery", () => {
       "document-1",
     ]);
 
-    mocks.vectorStore.search.mockResolvedValue([
+    mocks.hybridSearchService.search.mockResolvedValue([
       {
         chunk: {
+          id: "chunk-1",
           text: "Informação irrelevante",
           source_file: "manual.txt",
           chunk_index: 0,
           char_start: 0,
           char_end: 20,
+          embedding: [],
         },
         similarity_score: 0.2,
+        dense_score: 0.2,
+        lexical_score: 0,
+        rrf_score: 0.01,
       },
     ]);
 
@@ -168,14 +175,9 @@ describe("queryService.processQuery", () => {
       conversationId: "conversation-1",
     });
 
-    expect(mocks.embeddingService.generate).toHaveBeenCalledWith(
+    expect(mocks.hybridSearchService.search).toHaveBeenCalledWith(
       "Como faço uma entrada?",
-    );
-
-    expect(mocks.vectorStore.search).toHaveBeenCalledWith(
-      [0.1, 0.2, 0.3],
-      30,
-      0.3,
+      60,
       ["document-1"],
     );
 
@@ -193,15 +195,28 @@ describe("queryService.processQuery", () => {
       "document-2",
     ]);
 
-    mocks.vectorStore.search.mockResolvedValue([
+    const retrievedResult = {
+      chunk: {
+        id: "chunk-1",
+        text: "Para realizar uma entrada, acesse a tela de entrada.",
+        source_file: "manual-entrada.pdf",
+        chunk_index: 2,
+        char_start: 100,
+        char_end: 160,
+        embedding: [],
+      },
+      similarity_score: 0.87,
+      dense_score: 0.87,
+      lexical_score: 0.12,
+      rrf_score: 0.02,
+    };
+
+    mocks.hybridSearchService.search.mockResolvedValue([
+      retrievedResult,
+    ]);
+    mocks.rerankerService.rerank.mockResolvedValue([
       {
-        chunk: {
-          text: "Para realizar uma entrada, acesse a tela de entrada.",
-          source_file: "manual-entrada.pdf",
-          chunk_index: 2,
-          char_start: 100,
-          char_end: 160,
-        },
+        ...retrievedResult,
         similarity_score: 0.87,
       },
     ]);
@@ -233,15 +248,57 @@ describe("queryService.processQuery", () => {
       mocks.documentRepository.findAccessibleIds,
     ).toHaveBeenCalledWith("user-1");
 
-    expect(mocks.vectorStore.search).toHaveBeenCalledWith(
-      [0.1, 0.2, 0.3],
-      30,
-      0.3,
+    expect(mocks.hybridSearchService.search).toHaveBeenCalledWith(
+      "Como faço uma entrada?",
+      60,
       ["document-1", "document-2"],
     );
 
     expect(mocks.llmService.generate).toHaveBeenCalledWith(
       expect.stringContaining("Para realizar uma entrada"),
+    );
+  });
+
+  it("deve responder usando o ranking híbrido quando o reranker falhar", async () => {
+    mocks.db.query.conversations.findFirst.mockResolvedValue({
+      id: "conversation-1",
+      userId: "user-1",
+    });
+    mocks.documentRepository.findAccessibleIds.mockResolvedValue([
+      "document-1",
+    ]);
+    mocks.hybridSearchService.search.mockResolvedValue([
+      {
+        chunk: {
+          id: "chunk-1",
+          text: "Acesse a tela de entrada para continuar.",
+          source_file: "manual-entrada.pdf",
+          chunk_index: 1,
+          char_start: 0,
+          char_end: 44,
+          embedding: [],
+        },
+        similarity_score: 0.8,
+        dense_score: 0.8,
+        lexical_score: 0.1,
+        rrf_score: 0.02,
+      },
+    ]);
+    mocks.rerankerService.rerank.mockRejectedValue(
+      new Error("modelo indisponível"),
+    );
+
+    const result = await queryService.processQuery({
+      question: "Como faço uma entrada?",
+      conversationId: "conversation-1",
+      userId: "user-1",
+    });
+
+    expect(result.outcome).toBe("success");
+    expect(mocks.llmService.generate).toHaveBeenCalledTimes(1);
+    expect(mocks.logger.warn).toHaveBeenCalledWith(
+      "Reranker unavailable; falling back to hybrid ranking",
+      expect.any(Error),
     );
   });
 });
