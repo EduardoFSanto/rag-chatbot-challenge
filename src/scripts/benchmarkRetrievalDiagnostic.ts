@@ -149,8 +149,8 @@ function createRankedResult(
           chunk_index: number;
         };
         similarity_score?: number;
-        lexical_score?: number;
-        rrf_score?: number;
+        lexical_score?: number | null;
+        rrf_score?: number | null;
       }
     | undefined,
   rank: number | null,

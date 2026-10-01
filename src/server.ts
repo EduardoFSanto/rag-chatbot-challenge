@@ -20,8 +20,9 @@ async function bootstrap() {
     logger.info(`📤 Upload endpoint: http://localhost:${config.port}/api/documents/upload`);
     logger.info(`❓ Query endpoint: http://localhost:${config.port}/api/ask`);
     logger.debug("Configuration:", {
-      llmProvider: "Groq",
-      llmModel: config.groq.model,
+      llmProvider: config.llm.provider,
+      llmModel:
+        config.llm[config.llm.provider].model,
       embeddingProvider: "Local (Transformers.js)",
       embeddingModel: config.embeddings.model,
       chunkSize: config.rag.chunkSize,
